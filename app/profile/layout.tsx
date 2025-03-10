@@ -1,5 +1,9 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
+import { headers } from 'next/headers'
+
+// This tells Next.js this is a dynamic route that should be rendered at request time
+export const dynamic = 'force-dynamic'
 
 export default async function ProfileLayout({
   children,
