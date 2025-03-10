@@ -1,4 +1,4 @@
-import crypto from 'crypto'
+  import crypto from 'crypto'
 
 // Generate a secure token
 export const generateToken = (): string => {

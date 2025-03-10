@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
@@ -14,7 +14,8 @@ import { Eye, EyeOff } from "lucide-react"
 import { signIn } from "next-auth/react"
 import { Separator } from "@/components/ui/separator"
 
-export default function LoginPage() {
+// Create a separate component for the login form
+function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [formData, setFormData] = useState({
@@ -63,6 +64,7 @@ export default function LoginPage() {
     setSuccessMessage("")
 
     try {
+      console.log("Attempting login...")
       const result = await signIn("credentials", {
         email: formData.email,
         password: formData.password,
@@ -70,10 +72,26 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
+        console.log("Login failed:", result.error);
         setError("Invalid email or password. Please try again.");
       } else {
-        console.log("Login successful, redirecting to dashboard...");
-        router.push("/admin/dashboard");
+        console.log("Login successful, fetching session...");
+        
+        // Fetch the session to get the user role
+        const session = await fetch("/api/auth/session");
+        const sessionData = await session.json();
+        
+        console.log("User session data:", sessionData);
+        console.log("User role:", sessionData?.user?.role);
+        
+        // Redirect based on role
+        if (sessionData?.user?.role === "ADMIN") {
+          console.log("Redirecting to admin dashboard...");
+          router.push("/admin/dashboard");
+        } else {
+          console.log("Redirecting to home page...");
+          router.push("/");
+        }
       }
     } catch (error) {
       console.error("Login error:", error)
@@ -86,7 +104,8 @@ export default function LoginPage() {
   const handleGoogleSignIn = async () => {
     setIsLoading(true)
     try {
-      await signIn("google", { callbackUrl: "/admin/dashboard" })
+      console.log("Initiating Google sign-in...");
+      await signIn("google", { callbackUrl: "/api/auth/redirect-by-role" })
     } catch (error) {
       console.error("Google sign-in error:", error)
       setError("An error occurred with Google sign-in. Please try again.")
@@ -238,6 +257,15 @@ export default function LoginPage() {
         </Card>
       </motion.div>
     </div>
-  )
+  );
+}
+
+// Main component with Suspense boundary
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <LoginForm />
+    </Suspense>
+  );
 }
 

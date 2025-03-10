@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,26 +12,86 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { motion } from "framer-motion"
 import { User, Package, Heart, CreditCard, LogOut, Edit2, Save } from "lucide-react"
+import { getUserProfile, updateUserProfile, handleLogout } from "@/app/actions/user.actions"
+import { useToast } from "@/components/ui/use-toast"
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("account")
   const [isEditing, setIsEditing] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState("")
+  const router = useRouter()
+  const { toast } = useToast()
+  
   const [userData, setUserData] = useState({
-    firstName: "John",
-    lastName: "Doe",
-    email: "john.doe@example.com",
-    phone: "+92 300 1234567",
-    address: "123 Main Street, Apartment 4B",
-    city: "Karachi",
-    state: "Sindh",
-    postalCode: "75300",
-    country: "Pakistan",
+    id: "",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "",
+    postalCode: "",
+    country: "",
+    role: "",
   })
 
-  const [showAdminLogin, setShowAdminLogin] = useState(false)
-  const [adminCredentials, setAdminCredentials] = useState({ username: "", password: "" })
+  // Fetch user data on component mount
+  useEffect(() => {
+    async function fetchUserData() {
+      try {
+        setIsLoading(true)
+        const result = await getUserProfile()
+        
+        if (!result.success) {
+          // If not authenticated, redirect to login
+          if (result.error === 'Not authenticated') {
+            router.push('/auth/login')
+            return
+          }
+          
+          setError(result.error || "Failed to load profile data")
+          return
+        }
+        
+        const user = result.data
+        
+        if (!user) {
+          setError("User data not found")
+          return
+        }
+        
+        // Split name into first and last name
+        const nameParts = user.name ? user.name.split(' ') : ['', '']
+        const firstName = nameParts[0] || ''
+        const lastName = nameParts.slice(1).join(' ') || ''
+        
+        setUserData({
+          id: user.id || '',
+          firstName,
+          lastName,
+          email: user.email || '',
+          phone: user.phone || '',
+          address: user.address || '',
+          city: user.city || '',
+          state: user.state || '',
+          postalCode: user.postalCode || '',
+          country: user.country || '',
+          role: user.role || '',
+        })
+      } catch (error) {
+        console.error("Error fetching user data:", error)
+        setError("Failed to load profile data")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    fetchUserData()
+  }, [router])
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: any) => {
     const { name, value } = e.target
     setUserData({
       ...userData,
@@ -42,29 +103,91 @@ export default function ProfilePage() {
     setIsEditing(!isEditing)
   }
 
-  const saveChanges = () => {
-    // In a real app, you would save the changes to the backend here
-    setIsEditing(false)
+  const saveChanges = async () => {
+    try {
+      setIsLoading(true)
+      
+      // Create FormData object
+      const formData = new FormData()
+      formData.append('firstName', userData.firstName)
+      formData.append('lastName', userData.lastName)
+      formData.append('phone', userData.phone)
+      formData.append('address', userData.address)
+      formData.append('city', userData.city)
+      formData.append('state', userData.state)
+      formData.append('postalCode', userData.postalCode)
+      formData.append('country', userData.country)
+      
+      const result = await updateUserProfile(formData)
+      
+      if (result.success) {
+        toast({
+          title: "Profile updated",
+          description: "Your profile has been updated successfully.",
+          variant: "default",
+        })
+        setIsEditing(false)
+      } else {
+        toast({
+          title: "Update failed",
+          description: result.error || "Failed to update profile",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error)
+      toast({
+        title: "Update failed",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleAdminInputChange = (e) => {
-    const { name, value } = e.target
-    setAdminCredentials({
-      ...adminCredentials,
-      [name]: value,
-    })
+  const onLogout = async () => {
+    try {
+      await handleLogout()
+      // The redirect is handled by the server action
+    } catch (error) {
+      console.error("Error logging out:", error)
+      toast({
+        title: "Logout failed",
+        description: "Failed to log out. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
-  const handleAdminLogin = (e) => {
-    e.preventDefault()
-    // In a real app, you would validate credentials and redirect to admin panel
-    console.log("Admin login attempt:", adminCredentials)
-    alert("Admin login functionality would be implemented here")
-    setShowAdminLogin(false)
-    setAdminCredentials({ username: "", password: "" })
+  // Loading state
+  if (isLoading && !userData.id) {
+    return (
+      <div className="pt-24 pb-16 flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-t-green-500 border-green-200 rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 text-lg text-green-800">Loading your profile...</p>
+        </div>
+      </div>
+    )
   }
 
-  // Sample order history
+  // Error state
+  if (error) {
+    return (
+      <div className="pt-24 pb-16 container mx-auto px-4">
+        <div className="text-center py-12">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Error Loading Profile</h2>
+          <p className="mb-6">{error}</p>
+          <Button onClick={() => router.push('/auth/login')}>
+            Go to Login
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  // Sample order history - in a real app, this would come from the database
   const orders = [
     {
       id: "BO-12345",
@@ -100,7 +223,7 @@ export default function ProfilePage() {
     },
   ]
 
-  // Sample wishlist
+  // Sample wishlist - in a real app, this would come from the database
   const wishlist = [
     {
       id: 1,
@@ -187,6 +310,7 @@ export default function ProfilePage() {
                 <Button
                   variant="outline"
                   className="w-full border-pink-500 text-pink-500 hover:bg-pink-50 hover:text-pink-600"
+                  onClick={onLogout}
                 >
                   <LogOut className="h-4 w-4 mr-2" />
                   Sign Out
@@ -251,14 +375,8 @@ export default function ProfilePage() {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
-                        <Input
-                          id="email"
-                          name="email"
-                          type="email"
-                          value={userData.email}
-                          onChange={handleInputChange}
-                          disabled={!isEditing}
-                        />
+                        <Input id="email" name="email" value={userData.email} disabled />
+                        <p className="text-xs text-gray-500">Email cannot be changed</p>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="phone">Phone</Label>
@@ -270,10 +388,6 @@ export default function ProfilePage() {
                           disabled={!isEditing}
                         />
                       </div>
-                    </div>
-
-                    <h3 className="font-medium text-green-800 mt-8 mb-4">Address Information</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2 md:col-span-2">
                         <Label htmlFor="address">Address</Label>
                         <Input
@@ -328,10 +442,23 @@ export default function ProfilePage() {
                   </form>
                 </CardContent>
                 {isEditing && (
-                  <CardFooter>
-                    <Button onClick={saveChanges} className="bg-green-700 hover:bg-green-800 text-white">
-                      <Save className="h-4 w-4 mr-2" />
-                      Save Changes
+                  <CardFooter className="flex justify-end">
+                    <Button 
+                      onClick={saveChanges} 
+                      className="bg-green-700 hover:bg-green-800"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <div className="flex items-center">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                          Saving...
+                        </div>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4 mr-2" />
+                          Save Changes
+                        </>
+                      )}
                     </Button>
                   </CardFooter>
                 )}
@@ -503,59 +630,6 @@ export default function ProfilePage() {
             </TabsContent>
           </div>
         </Tabs>
-
-        <div className="mt-8 text-center">
-          <Button
-            variant="link"
-            className="text-green-600 text-sm opacity-70 hover:opacity-100"
-            onClick={() => setShowAdminLogin(true)}
-          >
-            Login as Admin
-          </Button>
-        </div>
-
-        {showAdminLogin && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4"
-            >
-              <h2 className="font-playfair text-2xl font-bold text-green-800 mb-4">Admin Login</h2>
-              <form onSubmit={handleAdminLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="admin-username">Username</Label>
-                  <Input
-                    id="admin-username"
-                    name="username"
-                    value={adminCredentials.username}
-                    onChange={handleAdminInputChange}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="admin-password">Password</Label>
-                  <Input
-                    id="admin-password"
-                    name="password"
-                    type="password"
-                    value={adminCredentials.password}
-                    onChange={handleAdminInputChange}
-                    required
-                  />
-                </div>
-                <div className="flex justify-end space-x-2 pt-2">
-                  <Button type="button" variant="outline" onClick={() => setShowAdminLogin(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" className="bg-green-700 hover:bg-green-800 text-white">
-                    Login
-                  </Button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
       </div>
     </div>
   )

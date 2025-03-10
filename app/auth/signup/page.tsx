@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
@@ -14,7 +14,8 @@ import { Eye, EyeOff } from "lucide-react"
 import { signIn } from "next-auth/react"
 import { Separator } from "@/components/ui/separator"
 
-export default function SignupPage() {
+// Create a separate component for the signup form
+function SignupForm() {
   const router = useRouter()
   const [formData, setFormData] = useState({
     firstName: "",
@@ -89,7 +90,7 @@ export default function SignupPage() {
   const handleGoogleSignIn = async () => {
     setIsLoading(true)
     try {
-      await signIn("google", { callbackUrl: "/admin/dashboard" })
+      await signIn("google", { callbackUrl: "/api/auth/redirect-by-role" })
     } catch (error) {
       console.error("Google sign-in error:", error)
       setError("An error occurred with Google sign-in. Please try again.")
@@ -281,6 +282,15 @@ export default function SignupPage() {
         </Card>
       </motion.div>
     </div>
-  )
+  );
+}
+
+// Main component with Suspense boundary
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <SignupForm />
+    </Suspense>
+  );
 }
 

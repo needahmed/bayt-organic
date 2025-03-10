@@ -13,14 +13,26 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Bell, Menu, Search, Settings, User, LogOut } from "lucide-react"
+import { handleLogout } from "@/app/actions/user.actions"
+import { useToast } from "@/components/ui/use-toast"
 
-export default function AdminHeader({ onMobileMenuClick }) {
+export default function AdminHeader({ onMobileMenuClick }: { onMobileMenuClick: () => void }) {
   const router = useRouter()
   const [notifications, setNotifications] = useState(3)
+  const { toast } = useToast()
 
-  const handleLogout = () => {
-    // Redirect to home page without authentication check
-    router.push("/")
+  const onLogout = async () => {
+    try {
+      await handleLogout()
+      // The redirect is handled by the server action
+    } catch (error) {
+      console.error("Error logging out:", error)
+      toast({
+        title: "Logout failed",
+        description: "Failed to log out. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   return (
@@ -80,7 +92,7 @@ export default function AdminHeader({ onMobileMenuClick }) {
               <span>Settings</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
+            <DropdownMenuItem onClick={onLogout}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Log out</span>
             </DropdownMenuItem>

@@ -6,6 +6,7 @@ import AdminSidebar from '@/components/admin/sidebar'
 import AdminHeader from '@/components/admin/header'
 import { Playfair_Display as PlayfairDisplay, Poppins } from 'next/font/google'
 import '../globals.css'
+import AdminAccess from '@/app/components/AdminAccess'
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -26,24 +27,26 @@ export default function AdminLayout({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Desktop Sidebar */}
-      <div className="hidden lg:block">
-        <AdminSidebar isMobile={false} onClose={() => {}} />
-      </div>
-
-      {/* Mobile Sidebar */}
-      {isMobileMenuOpen && (
-        <div className="lg:hidden">
-          <AdminSidebar isMobile={true} onClose={() => setIsMobileMenuOpen(false)} />
+    <AdminAccess>
+      <div className="flex h-screen overflow-hidden bg-gray-50">
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:block">
+          <AdminSidebar isMobile={false} onClose={() => {}} />
         </div>
-      )}
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <AdminHeader onMobileMenuClick={() => setIsMobileMenuOpen(true)} />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+        {/* Mobile Sidebar */}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden">
+            <AdminSidebar isMobile={true} onClose={() => setIsMobileMenuOpen(false)} />
+          </div>
+        )}
+
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <AdminHeader onMobileMenuClick={() => setIsMobileMenuOpen(true)} />
+          <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+        </div>
       </div>
-    </div>
+    </AdminAccess>
   )
 }
 

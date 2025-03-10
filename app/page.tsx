@@ -102,14 +102,23 @@ export default function Home() {
       {/* Hero Section */}
       <section ref={scrollRef} className="relative min-h-[90vh] flex items-center overflow-hidden">
         <motion.div style={{ y, opacity }} className="absolute inset-0 -z-10">
-          <div className="absolute inset-0 bg-gradient-to-b from-green-50/80 to-white/90" />
-          <Image
-            src="/placeholder.svg?height=1080&width=1920"
-            alt="Natural organic products"
-            fill
-            className="object-cover"
-            priority
-          />
+          <div className="absolute inset-0 bg-gradient-to-b from-green-50/80 to-white/90 z-10" />
+          <div className="absolute inset-0 w-full h-full">
+            <video 
+              autoPlay 
+              muted 
+              loop 
+              playsInline
+              className="w-full h-full object-cover"
+            >
+              <source src="https://imagesbayt.blob.core.windows.net/videos/hero-video.mp4" type="video/mp4" />
+              <img 
+                src="/video.gif" 
+                alt="Natural organic products" 
+                className="w-full h-full object-cover"
+              />
+            </video>
+          </div>
         </motion.div>
 
         <div className="container mx-auto px-4 py-20 relative z-10">
@@ -254,9 +263,11 @@ export default function Home() {
             >
               <div className="absolute -top-4 -left-4 w-24 h-24 bg-pink-100 rounded-full -z-10" />
               <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-green-100 rounded-full -z-10" />
-              <Image
-                src="/placeholder.svg?height=600&width=600"
-                alt="About Bayt Organic"
+              <video
+                src="https://imagesbayt.blob.core.windows.net/videos/farm.mp4"
+                autoPlay
+                loop
+                muted
                 width={500}
                 height={500}
                 className="rounded-lg shadow-lg"
