@@ -19,7 +19,7 @@ export type ProductFormData = {
   status: ProductStatus
   categoryId: string
   collectionIds?: string[] | string
-  images: File[]
+  images?: File[] | null
   existingImages?: string[]
 }
 

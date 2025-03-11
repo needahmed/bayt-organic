@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ChevronLeft, Upload, X } from "lucide-react"
-import { createProduct } from "@/app/actions/products.action"
+import { createProduct, ProductFormData } from "@/app/actions/products.action"
+import { ProductStatus } from "@prisma/client"
 import { getCategories } from "@/app/actions/categories.action"
 import { getCollections } from "@/app/actions/collections.action"
 import { toast } from "sonner"
@@ -27,7 +28,7 @@ interface ProductData {
   discountedPrice: string;
   weight: string;
   stock: string;
-  status: string;
+  status: ProductStatus;
   ingredients: string;
   benefits: string;
   howToUse: string;
@@ -66,7 +67,7 @@ export default function AddProductPage() {
     discountedPrice: "",
     weight: "",
     stock: "",
-    status: "ACTIVE",
+    status: "ACTIVE" as ProductStatus,
     ingredients: "",
     benefits: "",
     howToUse: "",
@@ -128,25 +129,23 @@ export default function AddProductPage() {
     setIsLoading(true)
 
     try {
-      const formData = new FormData()
-      
-      // Add product data
-      Object.entries(productData).forEach(([key, value]) => {
-        formData.append(key, value.toString())
-      })
-      
-      // Add collection IDs
-      selectedCollections.forEach(id => {
-        formData.append('collectionIds', id)
-      })
-      
-      // Add the image URLs as existingImages
-      productImages.forEach(url => {
-        formData.append('existingImages', url)
-      })
+      // Validate required fields
+      if (!productData.name || !productData.description || !productData.categoryId) {
+        toast.error("Please fill in all required fields")
+        setIsLoading(false)
+        return
+      }
+
+      // Create product data object
+      const productFormData: ProductFormData = {
+        ...productData,
+        collectionIds: selectedCollections,
+        existingImages: productImages,
+        images: null // No file uploads in this form, using existingImages instead
+      }
 
       // Create product
-      const result = await createProduct(formData as any)
+      const result = await createProduct(productFormData)
       
       if (result.success) {
         toast.success("Product created successfully")
