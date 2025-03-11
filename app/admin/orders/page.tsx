@@ -93,7 +93,7 @@ const orders = [
 
 export default function OrdersPage() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedOrders, setSelectedOrders] = useState([])
+  const [selectedOrders, setSelectedOrders] = useState<string[]>([])
 
   const filteredOrders = orders.filter(
     (order) =>
@@ -102,7 +102,7 @@ export default function OrdersPage() {
       order.email.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
-  const handleSelectAll = (checked) => {
+  const handleSelectAll = (checked: boolean) => {
     if (checked) {
       setSelectedOrders(filteredOrders.map((order) => order.id))
     } else {
@@ -110,7 +110,7 @@ export default function OrdersPage() {
     }
   }
 
-  const handleSelectOrder = (checked, orderId) => {
+  const handleSelectOrder = (checked: boolean, orderId: string) => {
     if (checked) {
       setSelectedOrders([...selectedOrders, orderId])
     } else {
@@ -121,7 +121,7 @@ export default function OrdersPage() {
   const isAllSelected = filteredOrders.length > 0 && selectedOrders.length === filteredOrders.length
   const isPartiallySelected = selectedOrders.length > 0 && !isAllSelected
 
-  const getFulfillmentStatusBadge = (status) => {
+  const getFulfillmentStatusBadge = (status: string) => {
     switch (status) {
       case "Delivered":
         return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Delivered</Badge>
@@ -140,7 +140,7 @@ export default function OrdersPage() {
     }
   }
 
-  const getPaymentStatusBadge = (status) => {
+  const getPaymentStatusBadge = (status: string) => {
     switch (status) {
       case "Paid":
         return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Paid</Badge>
@@ -201,6 +201,7 @@ export default function OrdersPage() {
                   <TableHead className="w-12">
                     <Checkbox
                       checked={isAllSelected}
+                      // @ts-ignore - indeterminate is not in the type but works in the component
                       indeterminate={isPartiallySelected}
                       onCheckedChange={handleSelectAll}
                     />
@@ -228,7 +229,7 @@ export default function OrdersPage() {
                       <TableCell>
                         <Checkbox
                           checked={selectedOrders.includes(order.id)}
-                          onCheckedChange={(checked) => handleSelectOrder(checked, order.id)}
+                          onCheckedChange={(checked: boolean) => handleSelectOrder(checked, order.id)}
                         />
                       </TableCell>
                       <TableCell className="font-medium">{order.id}</TableCell>

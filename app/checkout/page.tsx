@@ -37,7 +37,7 @@ export default function CheckoutPage() {
     cardCvc: "",
   })
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData({
       ...formData,
@@ -45,28 +45,28 @@ export default function CheckoutPage() {
     })
   }
 
-  const handleCheckboxChange = (checked) => {
+  const handleCheckboxChange = (checked: boolean) => {
     setFormData({
       ...formData,
       saveInfo: checked,
     })
   }
 
-  const handleSelectChange = (name, value) => {
+  const handleSelectChange = (name: string, value: string) => {
     setFormData({
       ...formData,
       [name]: value,
     })
   }
 
-  const handleRadioChange = (value) => {
+  const handleRadioChange = (value: string) => {
     setFormData({
       ...formData,
       paymentMethod: value,
     })
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (activeStep === "shipping") {
       setActiveStep("payment")

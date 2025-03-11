@@ -79,7 +79,7 @@ export async function signIn(data: SignInFormData) {
     }
     
     // Verify the password
-    const isPasswordValid = verifyPassword(data.password, user.password)
+    const isPasswordValid = user.password ? verifyPassword(data.password, user.password) : false
     
     if (!isPasswordValid) {
       return { success: false, error: 'Invalid email or password' }
@@ -173,7 +173,7 @@ export async function changePassword(userId: string, currentPassword: string, ne
     }
     
     // Verify the current password
-    const isPasswordValid = verifyPassword(currentPassword, user.password)
+    const isPasswordValid = user.password ? verifyPassword(currentPassword, user.password) : false
     
     if (!isPasswordValid) {
       return { success: false, error: 'Current password is incorrect' }

@@ -2,9 +2,9 @@ import { cookies } from 'next/headers'
 import { ResponseCookie } from 'next/dist/compiled/@edge-runtime/cookies'
 
 // Set a cookie
-export function setCookie(name: string, value: string, options?: Partial<ResponseCookie>): void {
+export async function setCookie(name: string, value: string, options?: Partial<ResponseCookie>): Promise<void> {
   try {
-    const cookiesList = cookies()
+    const cookiesList = await cookies()
     
     cookiesList.set({
       name,
@@ -17,9 +17,9 @@ export function setCookie(name: string, value: string, options?: Partial<Respons
 }
 
 // Get a cookie value
-export function getCookie(name: string): string | undefined {
+export async function getCookie(name: string): Promise<string | undefined> {
   try {
-    const cookiesList = cookies()
+    const cookiesList = await cookies()
     return cookiesList.get(name)?.value
   } catch (error) {
     console.error(`Error getting cookie ${name}:`, error)
@@ -28,9 +28,9 @@ export function getCookie(name: string): string | undefined {
 }
 
 // Delete a cookie
-export function deleteCookie(name: string, options?: { path?: string }): void {
+export async function deleteCookie(name: string, options?: { path?: string }): Promise<void> {
   try {
-    const cookiesList = cookies()
+    const cookiesList = await cookies()
     
     cookiesList.delete({
       name,

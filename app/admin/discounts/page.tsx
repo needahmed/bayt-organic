@@ -96,7 +96,7 @@ const discounts = [
 export default function DiscountsPage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedDiscounts, setSelectedDiscounts] = useState([])
+  const [selectedDiscounts, setSelectedDiscounts] = useState<string[]>([])
 
   const filteredDiscounts = discounts.filter(
     (discount) =>
@@ -104,15 +104,15 @@ export default function DiscountsPage() {
       discount.description.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
-  const handleSelectAll = (checked) => {
+  const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedDiscounts(filteredDiscounts.map((discount) => discount.id))
+      setSelectedDiscounts(filteredDiscounts.map((discount) => discount.id.toString()))
     } else {
       setSelectedDiscounts([])
     }
   }
 
-  const handleSelectDiscount = (checked, discountId) => {
+  const handleSelectDiscount = (checked: boolean, discountId: string) => {
     if (checked) {
       setSelectedDiscounts([...selectedDiscounts, discountId])
     } else {
@@ -169,6 +169,7 @@ export default function DiscountsPage() {
                   <TableHead className="w-12">
                     <Checkbox
                       checked={isAllSelected}
+                      // @ts-ignore - indeterminate is not in the type but works in the component
                       indeterminate={isPartiallySelected}
                       onCheckedChange={handleSelectAll}
                     />
@@ -196,8 +197,8 @@ export default function DiscountsPage() {
                     <TableRow key={discount.id}>
                       <TableCell>
                         <Checkbox
-                          checked={selectedDiscounts.includes(discount.id)}
-                          onCheckedChange={(checked) => handleSelectDiscount(checked, discount.id)}
+                          checked={selectedDiscounts.includes(discount.id.toString())}
+                          onCheckedChange={(checked: boolean) => handleSelectDiscount(checked, discount.id.toString())}
                         />
                       </TableCell>
                       <TableCell className="font-medium">{discount.code}</TableCell>

@@ -19,7 +19,7 @@ export default function ContactPage() {
   })
   const [isSubmitted, setIsSubmitted] = useState(false)
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData({
       ...formData,
@@ -27,14 +27,14 @@ export default function ContactPage() {
     })
   }
 
-  const handleSelectChange = (value) => {
+  const handleSelectChange = (value: string) => {
     setFormData({
       ...formData,
       subject: value,
     })
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     // In a real app, you would send the form data to your backend here
     console.log("Form submitted:", formData)

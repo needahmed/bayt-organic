@@ -71,7 +71,7 @@ const collections = [
 export default function CollectionsPage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCollections, setSelectedCollections] = useState([])
+  const [selectedCollections, setSelectedCollections] = useState<string[]>([])
 
   const filteredCollections = collections.filter(
     (collection) =>
@@ -79,15 +79,15 @@ export default function CollectionsPage() {
       collection.description.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
-  const handleSelectAll = (checked) => {
+  const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedCollections(filteredCollections.map((collection) => collection.id))
+      setSelectedCollections(filteredCollections.map((collection) => collection.id.toString()))
     } else {
       setSelectedCollections([])
     }
   }
 
-  const handleSelectCollection = (checked, collectionId) => {
+  const handleSelectCollection = (checked: boolean, collectionId: string) => {
     if (checked) {
       setSelectedCollections([...selectedCollections, collectionId])
     } else {
@@ -144,6 +144,7 @@ export default function CollectionsPage() {
                   <TableHead className="w-12">
                     <Checkbox
                       checked={isAllSelected}
+                      // @ts-ignore - indeterminate is not in the type but works in the component
                       indeterminate={isPartiallySelected}
                       onCheckedChange={handleSelectAll}
                     />
@@ -169,8 +170,8 @@ export default function CollectionsPage() {
                     <TableRow key={collection.id}>
                       <TableCell>
                         <Checkbox
-                          checked={selectedCollections.includes(collection.id)}
-                          onCheckedChange={(checked) => handleSelectCollection(checked, collection.id)}
+                          checked={selectedCollections.includes(collection.id.toString())}
+                          onCheckedChange={(checked: boolean) => handleSelectCollection(checked, collection.id.toString())}
                         />
                       </TableCell>
                       <TableCell>

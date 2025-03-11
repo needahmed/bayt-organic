@@ -9,12 +9,27 @@ import { motion } from "framer-motion"
 import { Search, ShoppingBag, Truck, RefreshCw, CreditCard, HelpCircle } from "lucide-react"
 import { useState } from "react"
 
+// Define a type for FAQ items
+interface FAQItem {
+  question: string;
+  answer: string;
+}
+
+// Define a type for the faqData object
+interface FAQData {
+  products: FAQItem[];
+  orders: FAQItem[];
+  shipping: FAQItem[];
+  returns: FAQItem[];
+  payment: FAQItem[];
+}
+
 export default function FAQPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState("all")
 
   // FAQ data organized by category
-  const faqData = {
+  const faqData: FAQData = {
     products: [
       {
         question: "Are your products 100% natural?",
@@ -134,11 +149,11 @@ export default function FAQPage() {
 
   // Function to filter FAQs based on search query
   const filterFAQs = () => {
-    let filteredFAQs = []
+    let filteredFAQs: FAQItem[] = []
 
     // If a specific category is selected
     if (activeTab !== "all") {
-      filteredFAQs = faqData[activeTab]
+      filteredFAQs = faqData[activeTab as keyof FAQData]
     } else {
       // Combine all categories
       Object.values(faqData).forEach((category) => {
@@ -151,7 +166,7 @@ export default function FAQPage() {
       return filteredFAQs.filter(
         (faq) =>
           faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          faq.answer.toLowerCase().includes(searchQuery.toLowerCase()),
+          faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
       )
     }
 

@@ -44,16 +44,18 @@ const recentOrders = [
   },
 ]
 
-// Sample chart data
-const salesData = {
+// Replace with:
+type TimeRangeKey = 'daily' | 'weekly' | 'monthly';
+
+const salesData: Record<TimeRangeKey, number[]> = {
   daily: [1200, 1800, 1400, 2100, 1700, 2300, 2500],
   weekly: [8500, 9200, 7800, 10500, 11200, 9800, 12500],
   monthly: [35000, 42000, 38000, 45000, 52000, 48000, 56000],
 }
 
 export default function AdminDashboard() {
-  const [timeRange, setTimeRange] = useState("daily")
-  const [error, setError] = useState(null)
+  const [timeRange, setTimeRange] = useState<TimeRangeKey>("daily")
+  const [error, setError] = useState<Error | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
 
   // Add error boundary and initialization
@@ -63,7 +65,7 @@ export default function AdminDashboard() {
       setIsLoaded(true);
     } catch (err) {
       console.error("Error in admin dashboard:", err);
-      setError(err);
+      setError(err instanceof Error ? err : new Error(String(err)));
     }
   }, []);
 
@@ -197,7 +199,7 @@ export default function AdminDashboard() {
         <CardHeader>
           <CardTitle>Sales Overview</CardTitle>
           <CardDescription>View your sales performance over time</CardDescription>
-          <Tabs defaultValue="daily" className="w-full" onValueChange={setTimeRange}>
+          <Tabs defaultValue="daily" className="w-full" onValueChange={(value: string) => setTimeRange(value as TimeRangeKey)}>
             <TabsList className="grid w-full grid-cols-3 max-w-[400px]">
               <TabsTrigger value="daily">Daily</TabsTrigger>
               <TabsTrigger value="weekly">Weekly</TabsTrigger>

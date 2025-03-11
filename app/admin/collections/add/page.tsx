@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { ChevronLeft, Upload } from "lucide-react"
+import React from 'react'
 
 export default function AddCollectionPage() {
   const router = useRouter()
@@ -22,7 +23,7 @@ export default function AddCollectionPage() {
     featured: false,
   })
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setCollectionData({
       ...collectionData,
@@ -30,21 +31,21 @@ export default function AddCollectionPage() {
     })
   }
 
-  const handleSelectChange = (name, value) => {
+  const handleSelectChange = (name: string, value: string) => {
     setCollectionData({
       ...collectionData,
       [name]: value,
     })
   }
 
-  const handleSwitchChange = (name, checked) => {
+  const handleSwitchChange = (name: string, checked: boolean) => {
     setCollectionData({
       ...collectionData,
       [name]: checked,
     })
   }
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 

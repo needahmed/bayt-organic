@@ -42,14 +42,14 @@ export default function CartPage() {
   const [promoApplied, setPromoApplied] = useState(false)
   const [discount, setDiscount] = useState(0)
 
-  const updateQuantity = (id, newQuantity) => {
+  const updateQuantity = (id: string, newQuantity: number) => {
     if (newQuantity < 1) return
 
-    setCartItems(cartItems.map((item) => (item.id === id ? { ...item, quantity: newQuantity } : item)))
+    setCartItems(cartItems.map((item) => (item.id.toString() === id ? { ...item, quantity: newQuantity } : item)))
   }
 
-  const removeItem = (id) => {
-    setCartItems(cartItems.filter((item) => item.id !== id))
+  const removeItem = (id: string) => {
+    setCartItems(cartItems.filter((item) => item.id.toString() !== id))
   }
 
   const applyPromoCode = () => {
@@ -124,7 +124,7 @@ export default function CartPage() {
                             <h3 className="font-medium text-green-800">{item.name}</h3>
                             <p className="text-sm text-green-600">Weight: {item.weight}</p>
                             <button
-                              onClick={() => removeItem(item.id)}
+                              onClick={() => removeItem(item.id.toString())}
                               className="text-pink-500 text-sm flex items-center mt-1 hover:text-pink-600"
                             >
                               <Trash2 className="h-3 w-3 mr-1" />
@@ -141,7 +141,7 @@ export default function CartPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              onClick={() => updateQuantity(item.id.toString(), item.quantity - 1)}
                               className="h-8 w-8 rounded-none text-green-700"
                             >
                               <Minus className="h-3 w-3" />
@@ -150,7 +150,7 @@ export default function CartPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              onClick={() => updateQuantity(item.id.toString(), item.quantity + 1)}
                               className="h-8 w-8 rounded-none text-green-700"
                             >
                               <Plus className="h-3 w-3" />

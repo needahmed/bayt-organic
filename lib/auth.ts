@@ -23,7 +23,7 @@ export const verifyPassword = (password: string, hashedPassword: string): boolea
 }
 
 // Set a session cookie
-export const setSessionCookie = (userId: string): void => {
+export const setSessionCookie = async (userId: string): Promise<void> => {
   const token = generateToken()
   
   // Store the token in the database (in a real app, you'd have a sessions table)
@@ -32,7 +32,7 @@ export const setSessionCookie = (userId: string): void => {
   // Note: This function can only be used in server components or server actions
   try {
     // Get the cookie store
-    const cookiesList = cookies()
+    const cookiesList = await cookies()
     
     // Set session token
     cookiesList.set({
@@ -54,15 +54,15 @@ export const setSessionCookie = (userId: string): void => {
       path: '/',
     })
   } catch (error) {
-    console.error('Error setting session cookies:', error)
+    console.error('Error setting session cookie:', error)
   }
 }
 
 // Clear the session cookie
-export const clearSessionCookie = (): void => {
+export const clearSessionCookie = async (): Promise<void> => {
   // Note: This function can only be used in server components or server actions
   try {
-    const cookiesList = cookies()
+    const cookiesList = await cookies()
     
     cookiesList.delete({
       name: 'session_token',
@@ -74,7 +74,7 @@ export const clearSessionCookie = (): void => {
       path: '/',
     })
   } catch (error) {
-    console.error('Error clearing session cookies:', error)
+    console.error('Error clearing session cookie:', error)
   }
 }
 
@@ -82,7 +82,7 @@ export const clearSessionCookie = (): void => {
 export async function getCurrentUser(): Promise<User | null> {
   // Note: This function can only be used in server components or server actions
   try {
-    const cookiesList = cookies()
+    const cookiesList = await cookies()
     const userId = cookiesList.get('user_id')?.value
     
     if (!userId) {

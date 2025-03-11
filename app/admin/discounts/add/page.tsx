@@ -48,7 +48,7 @@ export default function AddDiscountPage() {
     status: "active",
   })
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setDiscountData({
       ...discountData,
@@ -56,21 +56,21 @@ export default function AddDiscountPage() {
     })
   }
 
-  const handleSelectChange = (name, value) => {
+  const handleSelectChange = (name: string, value: string) => {
     setDiscountData({
       ...discountData,
       [name]: value,
     })
   }
 
-  const handleRadioChange = (name, value) => {
+  const handleRadioChange = (name: string, value: string) => {
     setDiscountData({
       ...discountData,
       [name]: value,
     })
   }
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
