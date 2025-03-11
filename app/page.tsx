@@ -1,16 +1,34 @@
 "use client"
 
-import { useRef, useEffect } from "react"
+import { useRef, useEffect, useState } from "react"
 import Image from "next/image"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { motion, useScroll, useTransform, useInView } from "framer-motion"
 import { Leaf, Droplets, ShieldCheck, Recycle, Heart, Sparkles } from "lucide-react"
+import { getCollectionBySlug } from "@/app/actions/collections.action"
+import { ensureFeaturedCollection } from "@/app/actions/setup.action"
+import { Product, Category } from "@prisma/client"
+
+// Define the product type with related entities
+type ProductWithRelations = Product & {
+  category: Category;
+};
+
+type CollectionWithProducts = {
+  id: string;
+  name: string;
+  products: ProductWithRelations[];
+};
 
 export default function Home() {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true, amount: 0.2 })
+  const [featuredProducts, setFeaturedProducts] = useState<ProductWithRelations[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const scrollRef = useRef(null)
   const { scrollYProgress } = useScroll({
@@ -21,36 +39,37 @@ export default function Home() {
   const y = useTransform(scrollYProgress, [0, 1], [0, -100])
   const opacity = useTransform(scrollYProgress, [0, 0.5, 1], [1, 0.8, 0.6])
 
-  const products = [
+  // Fallback products in case the featured collection doesn't exist or is empty
+  const fallbackProducts = [
     {
-      id: 1,
+      id: "1",
       name: "Charcoal and Tree Body Soap",
       price: 900,
-      image: "/placeholder.svg?height=300&width=300",
-      category: "Soaps",
+      images: ["/placeholder.svg?height=300&width=300"],
+      category: { id: "1", name: "Soaps", slug: "soaps", image: null, createdAt: new Date(), updatedAt: new Date() },
     },
     {
-      id: 2,
+      id: "2",
       name: "Honey & Oats Body Soap",
       price: 1000,
-      image: "/placeholder.svg?height=300&width=300",
-      category: "Soaps",
+      images: ["/placeholder.svg?height=300&width=300"],
+      category: { id: "1", name: "Soaps", slug: "soaps", image: null, createdAt: new Date(), updatedAt: new Date() },
     },
     {
-      id: 3,
+      id: "3",
       name: "Coconut Milk Shampoo Bar",
       price: 1200,
-      image: "/placeholder.svg?height=300&width=300",
-      category: "Shampoos",
+      images: ["/placeholder.svg?height=300&width=300"],
+      category: { id: "2", name: "Shampoos", slug: "shampoos", image: null, createdAt: new Date(), updatedAt: new Date() },
     },
     {
-      id: 4,
+      id: "4",
       name: "Hair Growth Oil",
       price: 1500,
-      image: "/placeholder.svg?height=300&width=300",
-      category: "Body Care",
+      images: ["/placeholder.svg?height=300&width=300"],
+      category: { id: "3", name: "Body Care", slug: "body-care", image: null, createdAt: new Date(), updatedAt: new Date() },
     },
-  ]
+  ] as ProductWithRelations[]
 
   const benefits = [
     {
@@ -95,7 +114,41 @@ export default function Home() {
       .catch(error => {
         console.error('Failed to initialize Azure Storage:', error)
       })
+
+    // Ensure Featured collection exists
+    ensureFeaturedCollection()
+      .then(result => {
+        console.log('Featured collection setup:', result.message)
+      })
+      .catch(error => {
+        console.error('Failed to setup Featured collection:', error)
+      })
+
+    // Fetch featured products
+    const fetchFeaturedProducts = async () => {
+      setIsLoading(true)
+      try {
+        const result = await getCollectionBySlug('featured')
+        if (result.success && result.data) {
+          setFeaturedProducts(result.data.products)
+        } else {
+          console.warn('Featured collection not found or empty, using fallback products')
+          setFeaturedProducts(fallbackProducts)
+        }
+      } catch (err) {
+        console.error('Error fetching featured products:', err)
+        setError('Failed to load featured products')
+        setFeaturedProducts(fallbackProducts)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchFeaturedProducts()
   }, [])
+
+  // Display products based on what's available
+  const displayProducts = featuredProducts.length > 0 ? featuredProducts : fallbackProducts
 
   return (
     <div className="pt-16">
@@ -208,44 +261,69 @@ export default function Home() {
             <p className="text-green-700 max-w-2xl mx-auto">Discover our most loved handmade natural products</p>
           </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {products.map((product, index) => (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                viewport={{ once: true, amount: 0.2 }}
-                whileHover={{ y: -5 }}
-                className="group"
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-700 border-t-transparent"></div>
+            </div>
+          ) : error ? (
+            <div className="text-center py-8">
+              <p className="text-red-500">{error}</p>
+              <Button 
+                onClick={() => window.location.reload()} 
+                className="mt-4 bg-green-700 hover:bg-green-800 text-white"
               >
-                <Card className="overflow-hidden border-none shadow-md hover:shadow-lg transition-shadow">
-                  <div className="relative h-64 overflow-hidden">
-                    <Image
-                      src={product.image || "/placeholder.svg"}
-                      alt={product.name}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                    <div className="absolute top-3 left-3">
-                      <Badge className="bg-green-100 text-green-800 hover:bg-green-200">{product.category}</Badge>
-                    </div>
-                  </div>
-                  <CardContent className="p-4">
-                    <h3 className="font-medium text-green-800 mb-1 line-clamp-1">{product.name}</h3>
-                    <p className="text-pink-500 font-semibold">Rs. {product.price}</p>
-                    <Button className="w-full mt-3 bg-green-700 hover:bg-green-800 text-white" size="sm">
-                      Add to Cart
-                    </Button>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
+                Try Again
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {displayProducts.map((product, index) => (
+                <motion.div
+                  key={product.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  viewport={{ once: true, amount: 0.2 }}
+                  whileHover={{ y: -5 }}
+                  className="group"
+                >
+                  <Link href={`/products/${product.category.slug}/${product.id}`}>
+                    <Card className="overflow-hidden border-none shadow-md hover:shadow-lg transition-shadow">
+                      <div className="relative h-64 overflow-hidden">
+                        <Image
+                          src={product.images[0] || "/placeholder.svg"}
+                          alt={product.name}
+                          fill
+                          className="object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                        <div className="absolute top-3 left-3">
+                          <Badge className="bg-green-100 text-green-800 hover:bg-green-200">{product.category.name}</Badge>
+                        </div>
+                      </div>
+                      <CardContent className="p-4">
+                        <h3 className="font-medium text-green-800 mb-1 line-clamp-1">{product.name}</h3>
+                        {product.discountedPrice ? (
+                          <div>
+                            <span className="text-muted-foreground line-through text-xs">Rs. {product.price}</span>
+                            <p className="text-pink-500 font-semibold">Rs. {product.discountedPrice}</p>
+                          </div>
+                        ) : (
+                          <p className="text-pink-500 font-semibold">Rs. {product.price}</p>
+                        )}
+                        <Button className="w-full mt-3 bg-green-700 hover:bg-green-800 text-white" size="sm">
+                          View Product
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+          )}
 
           <div className="text-center mt-12">
-            <Button variant="outline" className="border-green-700 text-green-700 hover:bg-green-50">
-              View All Products
+            <Button asChild variant="outline" className="border-green-700 text-green-700 hover:bg-green-50">
+              <Link href="/products">View All Products</Link>
             </Button>
           </div>
         </div>

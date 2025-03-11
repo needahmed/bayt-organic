@@ -14,9 +14,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ChevronLeft, Upload, X } from "lucide-react"
 import { updateProduct, getProductById } from "@/app/actions/products.action"
 import { getCategories } from "@/app/actions/categories.action"
-import { getCollections } from "@/app/actions/collections.action"
 import { toast } from "sonner"
 import { ImageUpload } from "@/components/ui/image-upload"
+import { ManageProductCollections } from "@/components/admin/manage-product-collections"
 
 // Define types for product data
 interface ProductData {
@@ -60,8 +60,6 @@ export default function EditProductPage({ params }: { params: any }) {
   const [isInitialLoading, setIsInitialLoading] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
-  const [collections, setCollections] = useState<Collection[]>([])
-  const [selectedCollections, setSelectedCollections] = useState<string[]>([])
   const [productImages, setProductImages] = useState<string[]>([])
   const [productData, setProductData] = useState<ProductData>({
     name: "",
@@ -80,18 +78,13 @@ export default function EditProductPage({ params }: { params: any }) {
   useEffect(() => {
     const fetchProductData = async () => {
       try {
-        const [categoriesResult, collectionsResult, productResult] = await Promise.all([
+        const [categoriesResult, productResult] = await Promise.all([
           getCategories(),
-          getCollections(),
           getProductById(productId)
         ])
         
         if (categoriesResult.success && categoriesResult.data) {
           setCategories(categoriesResult.data)
-        }
-        
-        if (collectionsResult.success && collectionsResult.data) {
-          setCollections(collectionsResult.data)
         }
         
         if (productResult.success && productResult.data) {
@@ -110,16 +103,6 @@ export default function EditProductPage({ params }: { params: any }) {
             benefits: Array.isArray(product.benefits) ? product.benefits.join(', ') : "",
             howToUse: product.howToUse || "",
           })
-          
-          // Set product collections
-          if (product.collectionIds && Array.isArray(product.collectionIds)) {
-            setSelectedCollections(product.collectionIds);
-          } else if (product.collections && Array.isArray(product.collections)) {
-            const collectionIds = product.collections.map((c: any) => c.id);
-            setSelectedCollections(collectionIds);
-          } else {
-            setSelectedCollections([]);
-          }
           
           // Set product images directly as URLs
           setProductImages(Array.isArray(product.images) ? product.images : [])
@@ -152,14 +135,6 @@ export default function EditProductPage({ params }: { params: any }) {
       [name]: value,
     })
   }
-
-  const handleCollectionToggle = (collectionId: string) => {
-    if (selectedCollections.includes(collectionId)) {
-      setSelectedCollections(selectedCollections.filter((id) => id !== collectionId))
-    } else {
-      setSelectedCollections([...selectedCollections, collectionId])
-    }
-  }
   
   const handleImagesChange = (images: string[]) => {
     setProductImages(images);
@@ -175,11 +150,6 @@ export default function EditProductPage({ params }: { params: any }) {
       // Add product data
       Object.entries(productData).forEach(([key, value]) => {
         formData.append(key, value.toString())
-      })
-      
-      // Add collection IDs
-      selectedCollections.forEach(id => {
-        formData.append('collectionIds', id)
       })
       
       // Add images - these are now URLs, not Files
@@ -229,7 +199,7 @@ export default function EditProductPage({ params }: { params: any }) {
       <form onSubmit={handleSubmit}>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="basic">Product Details</TabsTrigger>
+            <TabsTrigger value="basic">Basic Info</TabsTrigger>
             <TabsTrigger value="details">Attributes</TabsTrigger>
             <TabsTrigger value="images">Images</TabsTrigger>
             <TabsTrigger value="collections">Collections</TabsTrigger>
@@ -426,23 +396,7 @@ export default function EditProductPage({ params }: { params: any }) {
                 <CardDescription>Assign this product to collections</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {collections.map((collection) => (
-                    <div key={collection.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`collection-${collection.id}`}
-                        checked={selectedCollections.includes(collection.id)}
-                        onCheckedChange={() => handleCollectionToggle(collection.id)}
-                      />
-                      <Label
-                        htmlFor={`collection-${collection.id}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        {collection.name}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
+                <ManageProductCollections productId={productId} />
               </CardContent>
             </Card>
           </TabsContent>

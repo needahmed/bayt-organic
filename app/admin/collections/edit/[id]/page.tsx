@@ -14,6 +14,7 @@ import { ChevronLeft, Upload } from "lucide-react"
 import { toast } from "sonner"
 import Image from "next/image"
 import { getCollectionById, updateCollection, CollectionFormData } from "@/app/actions/collections.action"
+import { ManageCollectionProducts } from "@/components/admin/manage-collection-products"
 
 export default function EditCollectionPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -250,6 +251,25 @@ export default function EditCollectionPage({ params }: { params: { id: string } 
           </div>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Collection Products</CardTitle>
+          <CardDescription>Manage the products in this collection</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ManageCollectionProducts collectionId={id} />
+        </CardContent>
+      </Card>
+
+      <div className="flex items-center gap-2 justify-end">
+        <Button variant="outline" onClick={() => router.push("/admin/collections")}>
+          Cancel
+        </Button>
+        <Button onClick={handleSubmit} className="bg-green-700 hover:bg-green-800 text-white" disabled={isLoading}>
+          {isLoading ? "Saving..." : "Save Changes"}
+        </Button>
+      </div>
     </div>
   )
 } 

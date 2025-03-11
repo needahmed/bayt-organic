@@ -20,6 +20,7 @@ import { Plus, Search, MoreHorizontal, Edit, Trash, Eye, Package } from "lucide-
 import { useRouter } from "next/navigation"
 import { getCollections } from "@/app/actions/collections.action"
 import { toast } from "sonner"
+import { ManageCollectionProducts } from "@/components/admin/manage-collection-products"
 
 // Define Collection type
 interface Collection {
@@ -44,26 +45,26 @@ export default function CollectionsPage() {
 
   // Fetch collections from the database
   useEffect(() => {
-    const fetchCollections = async () => {
-      try {
-        setIsLoading(true)
-        const result = await getCollections()
-        
-        if (result.success) {
-          setCollections(result.data || [])
-        } else {
-          toast.error(result.error || "Failed to load collections")
-        }
-      } catch (error) {
-        console.error("Error fetching collections:", error)
-        toast.error("An error occurred while loading collections")
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
     fetchCollections()
   }, [])
+
+  const fetchCollections = async () => {
+    try {
+      setIsLoading(true)
+      const result = await getCollections()
+      
+      if (result.success) {
+        setCollections(result.data || [])
+      } else {
+        toast.error(result.error || "Failed to load collections")
+      }
+    } catch (error) {
+      console.error("Error fetching collections:", error)
+      toast.error("An error occurred while loading collections")
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const filteredCollections = collections.filter(
     (collection) =>
@@ -219,9 +220,17 @@ export default function CollectionsPage() {
                               <Edit className="mr-2 h-4 w-4" />
                               Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Package className="mr-2 h-4 w-4" />
-                              Manage Products
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                              <ManageCollectionProducts 
+                                collectionId={collection.id} 
+                                onSaved={fetchCollections}
+                                trigger={
+                                  <div className="flex items-center w-full px-2 py-1.5 text-sm">
+                                    <Package className="mr-2 h-4 w-4" />
+                                    Manage Products
+                                  </div>
+                                }
+                              />
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="text-red-600">

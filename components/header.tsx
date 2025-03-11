@@ -53,8 +53,8 @@ export default function Header() {
           <Image
             src="/placeholder-logo.png"
             alt="Bayt Organic"
-            width={200}
-            height={100}
+            width={600}
+            height={300}
             className="h-12 w-auto"
             priority
           />

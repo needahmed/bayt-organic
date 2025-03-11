@@ -21,6 +21,7 @@ import { useRouter } from "next/navigation"
 import { getProducts, deleteProduct } from "@/app/actions/products.action"
 import { Product, ProductStatus } from "@prisma/client"
 import { toast } from "sonner"
+import { ManageProductCollections } from "@/components/admin/manage-product-collections"
 
 // Define the product type with related entities
 type ProductWithRelations = Product & {
@@ -48,25 +49,25 @@ export default function ProductsPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      setIsLoading(true)
-      try {
-        const result = await getProducts()
-        if (result.success) {
-          setProducts(result.data as ProductWithRelations[])
-        } else {
-          setError(result.error || "Unknown error")
-        }
-      } catch (err) {
-        setError("Failed to fetch products")
-        console.error(err)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
     fetchProducts()
   }, [])
+
+  const fetchProducts = async () => {
+    setIsLoading(true)
+    try {
+      const result = await getProducts()
+      if (result.success) {
+        setProducts(result.data as ProductWithRelations[])
+      } else {
+        setError(result.error || "Unknown error")
+      }
+    } catch (err) {
+      setError("Failed to fetch products")
+      console.error(err)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const filteredProducts = products.filter(
     (product) =>
@@ -278,9 +279,17 @@ export default function ProductsPage() {
                               <Edit className="mr-2 h-4 w-4" />
                               Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Tag className="mr-2 h-4 w-4" />
-                              Manage Collections
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                              <ManageProductCollections 
+                                productId={product.id} 
+                                onSaved={fetchProducts}
+                                trigger={
+                                  <div className="flex items-center w-full px-2 py-1.5 text-sm">
+                                    <Tag className="mr-2 h-4 w-4" />
+                                    Manage Collections
+                                  </div>
+                                }
+                              />
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 

@@ -18,6 +18,7 @@ import {
   ChevronDown,
   ChevronRight,
   X,
+  Star,
 } from "lucide-react"
 import { handleLogout } from "@/app/actions/user.actions"
 import { useToast } from "@/components/ui/use-toast"
@@ -37,6 +38,11 @@ const menuItems = [
     title: "Collections",
     href: "/admin/collections",
     icon: <Tag className="h-5 w-5" />,
+  },
+  {
+    title: "Featured",
+    href: "/admin/featured",
+    icon: <Star className="h-5 w-5" />,
   },
   {
     title: "Discounts",
