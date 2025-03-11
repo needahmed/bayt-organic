@@ -1,36 +1,93 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
+import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
 import {
   LayoutDashboard,
   Package,
-  Users,
+  Tag,
+  Percent,
   ShoppingCart,
   Settings,
-  ChevronLeft,
+  Users,
+  LogOut,
+  ChevronDown,
   ChevronRight,
   X,
-  LogOut,
 } from "lucide-react"
 import { handleLogout } from "@/app/actions/user.actions"
 import { useToast } from "@/components/ui/use-toast"
 
-export default function AdminSidebar({
-  isMobile = false,
-  onClose,
-}: {
-  isMobile?: boolean
-  onClose: () => void
+const menuItems = [
+  {
+    title: "Dashboard",
+    href: "/admin/dashboard",
+    icon: <LayoutDashboard className="h-5 w-5" />,
+  },
+  {
+    title: "Products",
+    href: "/admin/products",
+    icon: <Package className="h-5 w-5" />,
+  },
+  {
+    title: "Collections",
+    href: "/admin/collections",
+    icon: <Tag className="h-5 w-5" />,
+  },
+  {
+    title: "Discounts",
+    href: "/admin/discounts",
+    icon: <Percent className="h-5 w-5" />,
+  },
+  {
+    title: "Orders",
+    href: "/admin/orders",
+    icon: <ShoppingCart className="h-5 w-5" />,
+  },
+  {
+    title: "Settings",
+    href: "/admin/settings",
+    icon: <Settings className="h-5 w-5" />,
+  },
+  {
+    title: "Customers",
+    href: "/admin/customers",
+    icon: <Users className="h-5 w-5" />,
+  },
+]
+
+export default function AdminSidebar({ 
+  isMobile = false, 
+  onClose 
+}: { 
+  isMobile?: boolean; 
+  onClose: () => void 
 }) {
   const pathname = usePathname()
+  const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
   const { toast } = useToast()
+
+  // Check if we're on larger screens and set collapsed state accordingly
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setCollapsed(true)
+      } else {
+        setCollapsed(false)
+      }
+    }
+
+    // Set initial state
+    handleResize()
+
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
+  }, [])
 
   const onLogout = async () => {
     try {
@@ -46,105 +103,48 @@ export default function AdminSidebar({
     }
   }
 
-  const navigation = [
-    {
-      name: "Dashboard",
-      href: "/admin/dashboard",
-      icon: LayoutDashboard,
-      current: pathname === "/admin/dashboard",
-    },
-    {
-      name: "Products",
-      href: "/admin/products",
-      icon: Package,
-      current: pathname === "/admin/products",
-    },
-    {
-      name: "Customers",
-      href: "/admin/customers",
-      icon: Users,
-      current: pathname === "/admin/customers",
-    },
-    {
-      name: "Orders",
-      href: "/admin/orders",
-      icon: ShoppingCart,
-      current: pathname === "/admin/orders",
-    },
-    {
-      name: "Settings",
-      href: "/admin/settings",
-      icon: Settings,
-      current: pathname === "/admin/settings",
-    },
-  ]
-
   const sidebarContent = (
     <>
-      <div className="flex h-16 items-center justify-between px-4">
-        <Link href="/admin/dashboard" className="flex items-center">
-          <span
-            className={cn(
-              "font-playfair text-xl font-bold text-green-800",
-              collapsed ? "hidden" : "block"
-            )}
-          >
-            Bayt Admin
-          </span>
+      <div className="px-4 py-6">
+        <Link href="/admin/dashboard" className="flex items-center" onClick={isMobile ? onClose : undefined}>
+          <Image
+            src="/placeholder-logo.png"
+            alt="Bayt Organic"
+            width={120}
+            height={60}
+            className={cn("transition-all duration-300", collapsed ? "w-8" : "w-32")}
+          />
+          {!collapsed && <span className="ml-2 font-semibold text-green-800">Admin</span>}
         </Link>
-        {isMobile && (
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-5 w-5" />
-          </Button>
-        )}
-        {!isMobile && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setCollapsed(!collapsed)}
-            className="hidden lg:flex"
-          >
-            {collapsed ? (
-              <ChevronRight className="h-5 w-5" />
-            ) : (
-              <ChevronLeft className="h-5 w-5" />
-            )}
-          </Button>
-        )}
       </div>
 
-      <ScrollArea className="flex-1 px-2">
-        <nav className="space-y-1 px-2 py-4">
-          {navigation.map((item) => (
+      <div className="px-3 py-2">
+        <div className="space-y-1">
+          {menuItems.map((item) => (
             <Link
-              key={item.name}
+              key={item.href}
               href={item.href}
+              onClick={isMobile ? onClose : undefined}
               className={cn(
-                "group flex items-center rounded-md px-2 py-2 text-sm font-medium",
-                item.current
-                  ? "bg-green-100 text-green-800"
-                  : "text-gray-600 hover:bg-green-50 hover:text-green-700"
+                "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                pathname === item.href
+                  ? "bg-green-100 text-green-900"
+                  : "text-green-700 hover:bg-green-50 hover:text-green-900",
               )}
             >
-              <item.icon
-                className={cn(
-                  "mr-3 h-5 w-5 flex-shrink-0",
-                  item.current ? "text-green-700" : "text-gray-500 group-hover:text-green-600"
-                )}
-                aria-hidden="true"
-              />
-              {!collapsed && <span>{item.name}</span>}
+              <span className="mr-3">{item.icon}</span>
+              {!collapsed && <span>{item.title}</span>}
             </Link>
           ))}
-        </nav>
-      </ScrollArea>
+        </div>
+      </div>
 
-      <div className="border-t border-gray-200 p-4">
+      <div className="mt-auto px-3 py-4">
         <Button
-          variant="ghost"
+          variant="outline"
           className={cn(
-            "w-full justify-start text-gray-600 hover:bg-red-50 hover:text-red-700",
-            collapsed ? "px-2" : "px-2"
+            "w-full justify-start border-green-200 text-green-700 hover:bg-green-50 hover:text-green-900",
+            collapsed && "justify-center",
           )}
           onClick={onLogout}
         >
@@ -155,23 +155,40 @@ export default function AdminSidebar({
     </>
   )
 
+  // Mobile sidebar (overlay)
   if (isMobile) {
     return (
-      <Sheet open={true} onOpenChange={onClose}>
-        <SheetContent side="left" className="p-0 w-64">
-          <div className="flex h-full flex-col">{sidebarContent}</div>
-        </SheetContent>
-      </Sheet>
+      <div className="fixed inset-0 z-50 bg-black/50">
+        <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-lg">
+          <div className="flex h-full flex-col">
+            <div className="absolute right-0 top-0 mr-2 mt-2">
+              <Button variant="ghost" size="icon" onClick={onClose}>
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            {sidebarContent}
+          </div>
+        </div>
+      </div>
     )
   }
 
+  // Desktop sidebar
   return (
     <div
       className={cn(
-        "flex h-full flex-col border-r border-gray-200 bg-white",
-        collapsed ? "w-16" : "w-64"
+        "hidden lg:flex h-screen flex-col border-r border-gray-200 bg-white transition-all duration-300",
+        collapsed ? "w-16" : "w-64",
       )}
     >
+      <Button
+        variant="ghost"
+        size="icon"
+        className="absolute top-4 right-0 translate-x-1/2 rounded-full border shadow-sm bg-white h-6 w-6"
+        onClick={() => setCollapsed(!collapsed)}
+      >
+        {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+      </Button>
       {sidebarContent}
     </div>
   )

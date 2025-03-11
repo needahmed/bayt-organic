@@ -16,102 +16,65 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Plus, Search, MoreHorizontal, Edit, Trash, Eye, Tag } from "lucide-react"
+import { Plus, Search, MoreHorizontal, Edit, Trash, Eye, Tag, AlertCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { getProducts, deleteProduct } from "@/app/actions/products.action"
+import { Product, ProductStatus } from "@prisma/client"
+import { toast } from "sonner"
 
-// Sample product data
-const products = [
-  {
-    id: 1,
-    name: "Charcoal and Tree Body Soap",
-    price: 900,
-    discountedPrice: 0,
-    image: "/placeholder.svg?height=300&width=300",
-    category: "Soaps",
-    collections: ["Best Sellers", "New Arrivals"],
-    stock: 25,
-    status: "Active",
-  },
-  {
-    id: 2,
-    name: "Honey & Oats Body Soap",
-    price: 1000,
-    discountedPrice: 900,
-    image: "/placeholder.svg?height=300&width=300",
-    category: "Soaps",
-    collections: ["Best Sellers"],
-    stock: 18,
-    status: "Active",
-  },
-  {
-    id: 3,
-    name: "Coconut Milk Shampoo Bar",
-    price: 1200,
-    discountedPrice: 0,
-    image: "/placeholder.svg?height=300&width=300",
-    category: "Shampoos",
-    collections: ["New Arrivals"],
-    stock: 12,
-    status: "Active",
-  },
-  {
-    id: 4,
-    name: "Hair Growth Oil",
-    price: 1500,
-    discountedPrice: 1350,
-    image: "/placeholder.svg?height=300&width=300",
-    category: "Body Care",
-    collections: ["Best Sellers"],
-    stock: 8,
-    status: "Active",
-  },
-  {
-    id: 5,
-    name: "Anti-Aging Face Serum",
-    price: 1500,
-    discountedPrice: 0,
-    image: "/placeholder.svg?height=300&width=300",
-    category: "Body Care",
-    collections: ["Premium"],
-    stock: 15,
-    status: "Active",
-  },
-  {
-    id: 6,
-    name: "Lavender Lip Balm",
-    price: 500,
-    discountedPrice: 0,
-    image: "/placeholder.svg?height=300&width=300",
-    category: "Body Care",
-    collections: [],
-    stock: 0,
-    status: "Out of Stock",
-  },
-  {
-    id: 7,
-    name: "Dental Powder",
-    price: 700,
-    discountedPrice: 0,
-    image: "/placeholder.svg?height=300&width=300",
-    category: "Accessories",
-    collections: [],
-    stock: 5,
-    status: "Active",
-  },
-]
+// Define the product type with related entities
+type ProductWithRelations = Product & {
+  category: {
+    id: string;
+    name: string;
+    slug: string;
+    image: string | null;
+  };
+  collections: {
+    id: string;
+    name: string;
+    slug: string;
+    image: string | null;
+    description: string | null;
+  }[];
+};
 
 export default function ProductsPage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedProducts, setSelectedProducts] = useState([])
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([])
+  const [products, setProducts] = useState<ProductWithRelations[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setIsLoading(true)
+      try {
+        const result = await getProducts()
+        if (result.success) {
+          setProducts(result.data as ProductWithRelations[])
+        } else {
+          setError(result.error || "Unknown error")
+        }
+      } catch (err) {
+        setError("Failed to fetch products")
+        console.error(err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchProducts()
+  }, [])
 
   const filteredProducts = products.filter(
     (product) =>
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchQuery.toLowerCase()),
+      product.category.name.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
-  const handleSelectAll = (checked) => {
+  const handleSelectAll = (checked: boolean) => {
     if (checked) {
       setSelectedProducts(filteredProducts.map((product) => product.id))
     } else {
@@ -119,7 +82,7 @@ export default function ProductsPage() {
     }
   }
 
-  const handleSelectProduct = (checked, productId) => {
+  const handleSelectProduct = (checked: boolean, productId: string) => {
     if (checked) {
       setSelectedProducts([...selectedProducts, productId])
     } else {
@@ -127,8 +90,51 @@ export default function ProductsPage() {
     }
   }
 
+  const handleDeleteProduct = async (productId: string) => {
+    if (confirm("Are you sure you want to delete this product?")) {
+      try {
+        const result = await deleteProduct(productId)
+        if (result.success) {
+          toast.success("Product deleted successfully")
+          // Remove the product from the state
+          setProducts(products.filter(product => product.id !== productId))
+        } else {
+          toast.error(result.error || "Failed to delete product")
+        }
+      } catch (err) {
+        toast.error("An error occurred while deleting the product")
+        console.error(err)
+      }
+    }
+  }
+
   const isAllSelected = filteredProducts.length > 0 && selectedProducts.length === filteredProducts.length
   const isPartiallySelected = selectedProducts.length > 0 && !isAllSelected
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-green-700 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-green-700">Loading products...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center text-red-600">
+          <AlertCircle className="h-8 w-8 mx-auto mb-4" />
+          <p>{error}</p>
+          <Button onClick={() => window.location.reload()} className="mt-4">
+            Try Again
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -203,13 +209,13 @@ export default function ProductsPage() {
                       <TableCell>
                         <Checkbox
                           checked={selectedProducts.includes(product.id)}
-                          onCheckedChange={(checked) => handleSelectProduct(checked, product.id)}
+                          onCheckedChange={(checked) => handleSelectProduct(checked as boolean, product.id)}
                         />
                       </TableCell>
                       <TableCell>
                         <div className="relative h-10 w-10 overflow-hidden rounded-md">
                           <Image
-                            src={product.image || "/placeholder.svg"}
+                            src={product.images[0] || "/placeholder.svg"}
                             alt={product.name}
                             fill
                             className="object-cover"
@@ -217,13 +223,13 @@ export default function ProductsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">{product.name}</TableCell>
-                      <TableCell>{product.category}</TableCell>
+                      <TableCell>{product.category.name}</TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {product.collections.length > 0 ? (
                             product.collections.map((collection) => (
-                              <Badge key={collection} variant="outline" className="text-xs">
-                                {collection}
+                              <Badge key={collection.id} variant="outline" className="text-xs">
+                                {collection.name}
                               </Badge>
                             ))
                           ) : (
@@ -232,7 +238,7 @@ export default function ProductsPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {product.discountedPrice > 0 ? (
+                        {product.discountedPrice ? (
                           <div>
                             <span className="text-muted-foreground line-through text-xs">Rs. {product.price}</span>
                             <span className="ml-1 font-medium">Rs. {product.discountedPrice}</span>
@@ -245,8 +251,10 @@ export default function ProductsPage() {
                       <TableCell>
                         <Badge
                           className={
-                            product.status === "Active"
+                            product.status === ProductStatus.ACTIVE
                               ? "bg-green-100 text-green-800 hover:bg-green-100"
+                              : product.status === ProductStatus.OUT_OF_STOCK
+                              ? "bg-amber-100 text-amber-800 hover:bg-amber-100"
                               : "bg-red-100 text-red-800 hover:bg-red-100"
                           }
                         >
@@ -262,7 +270,7 @@ export default function ProductsPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => router.push(`/admin/products/${product.id}`)}>
+                            <DropdownMenuItem onClick={() => router.push(`/products/${product.category.slug}/${product.id}`)}>
                               <Eye className="mr-2 h-4 w-4" />
                               View
                             </DropdownMenuItem>
@@ -275,7 +283,10 @@ export default function ProductsPage() {
                               Manage Collections
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-600">
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => handleDeleteProduct(product.id)}
+                            >
                               <Trash className="mr-2 h-4 w-4" />
                               Delete
                             </DropdownMenuItem>

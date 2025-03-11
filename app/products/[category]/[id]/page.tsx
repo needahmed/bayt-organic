@@ -1,93 +1,55 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { use } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { motion } from "framer-motion"
-import { ChevronLeft, Minus, Plus, Star, Truck, Shield } from "lucide-react"
+import { ChevronLeft, Minus, Plus, Star, Truck, Shield, AlertCircle } from "lucide-react"
+import { getProductById } from "@/app/actions/products.action"
+import { Product, Category, Collection } from "@prisma/client"
 
-// This would normally come from a database or API
-const getProductData = (category, id) => {
-  // Sample product data
-  return {
-    id: Number.parseInt(id),
-    name: "Honey & Oats Body Soap",
-    price: 1000,
-    description:
-      "Our Honey & Oats Body Soap is a nourishing blend of natural ingredients designed to cleanse and moisturize your skin. The combination of honey and oats provides gentle exfoliation while soothing and hydrating the skin.",
-    weight: "90 gram",
-    category: category,
-    images: [
-      "/placeholder.svg?height=600&width=600",
-      "/placeholder.svg?height=600&width=600&text=Image+2",
-      "/placeholder.svg?height=600&width=600&text=Image+3",
-    ],
-    ingredients:
-      "Honey in equal water, Oats, Beeswax, Shea Butter, Multani Mitti, Rosemary, Almond Oil, Castor Oil, Extra Virgin Olive Oil, Coconut Oil, Cinnamon essential oil, Citric Acid, Sugar, NaOH, distilled water and Lye.",
-    benefits: [
-      "Gently exfoliates dead skin cells",
-      "Moisturizes and nourishes the skin",
-      "Soothes irritated skin",
-      "Natural antibacterial properties",
-      "Suitable for all skin types",
-    ],
-    howToUse:
-      "Wet the soap and lather between your hands or on a washcloth. Apply to your body in circular motions, then rinse thoroughly. For best results, allow the soap to dry between uses.",
-    reviews: [
-      {
-        id: 1,
-        name: "Sarah M.",
-        rating: 5,
-        date: "2023-12-15",
-        comment: "This soap is amazing! My skin feels so soft and the scent is divine. Will definitely purchase again.",
-      },
-      {
-        id: 2,
-        name: "Ahmed K.",
-        rating: 4,
-        date: "2023-11-20",
-        comment: "Great product, very moisturizing. I wish the bar was a bit bigger though.",
-      },
-      {
-        id: 3,
-        name: "Layla R.",
-        rating: 5,
-        date: "2023-10-05",
-        comment:
-          "I have sensitive skin and this soap is perfect for me. No irritation at all and leaves my skin feeling clean but not dry.",
-      },
-    ],
-    relatedProducts: [
-      {
-        id: 1,
-        name: "Charcoal and Tree Body Soap",
-        price: 900,
-        image: "/placeholder.svg?height=300&width=300",
-      },
-      {
-        id: 3,
-        name: "Milk Soap",
-        price: 900,
-        image: "/placeholder.svg?height=300&width=300",
-      },
-      {
-        id: 4,
-        name: "Coconut & Lavender Body Soap",
-        price: 900,
-        image: "/placeholder.svg?height=300&width=300",
-      },
-    ],
-  }
-}
+// Define the product type with related entities
+type ProductWithRelations = Product & {
+  category: Category;
+  collections: Collection[];
+  reviews: any[]; // Using any for reviews as we don't have the full type
+};
 
-export default function ProductPage({ params }) {
-  const { category, id } = params
-  const product = getProductData(category, id)
+export default function ProductPage({ params }: { params: any }) {
+  // Use React.use() to unwrap the params Promise
+  const unwrappedParams = use(params) as any
+  const { category, id } = unwrappedParams
+  
+  const [product, setProduct] = useState<ProductWithRelations | null>(null)
   const [quantity, setQuantity] = useState(1)
   const [selectedImage, setSelectedImage] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      setIsLoading(true)
+      try {
+        const result = await getProductById(id)
+        if (result.success && result.data) {
+          setProduct(result.data as ProductWithRelations)
+        } else {
+          setError(result.error || "Failed to fetch product")
+        }
+      } catch (err) {
+        console.error("Error fetching product:", err)
+        setError("An error occurred while fetching the product")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchProduct()
+  }, [id])
 
   const incrementQuantity = () => {
     setQuantity(quantity + 1)
@@ -99,6 +61,39 @@ export default function ProductPage({ params }) {
     }
   }
 
+  if (isLoading) {
+    return (
+      <div className="pt-24 pb-16">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin h-8 w-8 border-4 border-green-700 border-t-transparent rounded-full mx-auto mb-4"></div>
+              <p className="text-green-700">Loading product...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !product) {
+    return (
+      <div className="pt-24 pb-16">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center text-red-600">
+              <AlertCircle className="h-8 w-8 mx-auto mb-4" />
+              <p>{error || "Product not found"}</p>
+              <Button onClick={() => window.location.reload()} className="mt-4 bg-green-700 hover:bg-green-800 text-white">
+                Try Again
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="pt-24 pb-16">
       <div className="container mx-auto px-4">
@@ -108,7 +103,7 @@ export default function ProductPage({ params }) {
             Back to{" "}
             {category
               .split("-")
-              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+              .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
               .join(" ")}
           </Link>
         </div>
@@ -155,10 +150,7 @@ export default function ProductPage({ params }) {
           >
             <div>
               <Badge className="bg-green-100 text-green-800 mb-2">
-                {category
-                  .split("-")
-                  .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                  .join(" ")}
+                {product.category.name}
               </Badge>
               <h1 className="font-playfair text-3xl font-bold text-green-800 mb-2">{product.name}</h1>
               <div className="flex items-center mb-4">
@@ -169,7 +161,16 @@ export default function ProductPage({ params }) {
                 </div>
                 <span className="text-sm text-green-700">({product.reviews.length} reviews)</span>
               </div>
-              <p className="text-2xl font-semibold text-pink-500 mb-4">Rs. {product.price}</p>
+              <p className="text-2xl font-semibold text-pink-500 mb-4">
+                {product.discountedPrice ? (
+                  <>
+                    <span className="text-muted-foreground line-through text-lg mr-2">Rs. {product.price}</span>
+                    Rs. {product.discountedPrice}
+                  </>
+                ) : (
+                  <>Rs. {product.price}</>
+                )}
+              </p>
               <p className="text-green-700 mb-6">{product.description}</p>
 
               <div className="mb-6">
@@ -207,17 +208,21 @@ export default function ProductPage({ params }) {
                   <TabsTrigger value="how-to-use">How to Use</TabsTrigger>
                 </TabsList>
                 <TabsContent value="ingredients" className="text-green-700 mt-4 p-4 bg-green-50 rounded-md">
-                  <p>{product.ingredients}</p>
+                  <p>{product.ingredients || "No ingredients information available."}</p>
                 </TabsContent>
                 <TabsContent value="benefits" className="text-green-700 mt-4 p-4 bg-green-50 rounded-md">
                   <ul className="list-disc pl-5 space-y-1">
-                    {product.benefits.map((benefit, index) => (
-                      <li key={index}>{benefit}</li>
-                    ))}
+                    {product.benefits && product.benefits.length > 0 ? (
+                      product.benefits.map((benefit, index) => (
+                        <li key={index}>{benefit}</li>
+                      ))
+                    ) : (
+                      <li>No benefits information available.</li>
+                    )}
                   </ul>
                 </TabsContent>
                 <TabsContent value="how-to-use" className="text-green-700 mt-4 p-4 bg-green-50 rounded-md">
-                  <p>{product.howToUse}</p>
+                  <p>{product.howToUse || "No usage information available."}</p>
                 </TabsContent>
               </Tabs>
             </div>
@@ -227,65 +232,47 @@ export default function ProductPage({ params }) {
         {/* Reviews Section */}
         <div className="mt-16">
           <h2 className="font-playfair text-2xl font-bold text-green-800 mb-6">Customer Reviews</h2>
-          <div className="space-y-6">
-            {product.reviews.map((review) => (
-              <motion.div
-                key={review.id}
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                viewport={{ once: true }}
-                className="border-b border-gray-200 pb-6"
-              >
-                <div className="flex justify-between mb-2">
-                  <h3 className="font-medium text-green-800">{review.name}</h3>
-                  <span className="text-sm text-gray-500">{review.date}</span>
-                </div>
-                <div className="flex text-amber-400 mb-2">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`h-4 w-4 ${i < review.rating ? "fill-current" : "text-gray-300"}`}
-                      strokeWidth={i < review.rating ? 0 : 1}
-                    />
-                  ))}
-                </div>
-                <p className="text-green-700">{review.comment}</p>
-              </motion.div>
-            ))}
-          </div>
+          {product.reviews.length > 0 ? (
+            <div className="space-y-6">
+              {product.reviews.map((review) => (
+                <motion.div
+                  key={review.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                  viewport={{ once: true }}
+                  className="border-b border-gray-200 pb-6"
+                >
+                  <div className="flex justify-between mb-2">
+                    <h3 className="font-medium text-green-800">{review.name}</h3>
+                    <span className="text-sm text-gray-500">{new Date(review.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex text-amber-400 mb-2">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`h-4 w-4 ${i < review.rating ? "fill-current" : "text-gray-300"}`}
+                        strokeWidth={i < review.rating ? 0 : 1}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-green-700">{review.comment}</p>
+                </motion.div>
+              ))
+            }
+            </div>
+          ) : (
+            <p className="text-green-700">No reviews yet. Be the first to review this product!</p>
+          )}
         </div>
 
-        {/* Related Products */}
-        <div className="mt-16">
-          <h2 className="font-playfair text-2xl font-bold text-green-800 mb-6">You May Also Like</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {product.relatedProducts.map((relatedProduct, index) => (
-              <motion.div
-                key={relatedProduct.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                viewport={{ once: true }}
-                whileHover={{ y: -5 }}
-                className="group"
-              >
-                <Link href={`/products/${category}/${relatedProduct.id}`}>
-                  <div className="relative aspect-square overflow-hidden rounded-lg mb-2">
-                    <Image
-                      src={relatedProduct.image || "/placeholder.svg"}
-                      alt={relatedProduct.name}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                  </div>
-                  <h3 className="font-medium text-green-800 mb-1">{relatedProduct.name}</h3>
-                  <p className="text-pink-500 font-semibold">Rs. {relatedProduct.price}</p>
-                </Link>
-              </motion.div>
-            ))}
+        {/* Related Products Section */}
+        {product.collections.length > 0 && (
+          <div className="mt-16">
+            <h2 className="font-playfair text-2xl font-bold text-green-800 mb-6">You May Also Like</h2>
+            <p className="text-green-700 mb-6">Check out other products from our collections.</p>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )

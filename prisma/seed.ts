@@ -1,17 +1,17 @@
-import { PrismaClient, ProductStatus, Role } from '@prisma/client'
-import crypto from 'crypto'
+const { PrismaClient, ProductStatus, Role } = require('@prisma/client')
+const cryptoNode = require('crypto')
 
 const prisma = new PrismaClient()
 
 // Simple password hashing function for seeding
 const hashPassword = (password: string): string => {
-  return crypto.createHash('sha256').update(password).digest('hex')
+  return cryptoNode.createHash('sha256').update(password).digest('hex')
 }
 
 // Generate a MongoDB compatible ObjectId
 const generateObjectId = (): string => {
   const timestamp = Math.floor(new Date().getTime() / 1000).toString(16).padStart(8, '0')
-  const machineId = crypto.randomBytes(3).toString('hex')
+  const machineId = cryptoNode.randomBytes(3).toString('hex')
   const processId = Math.floor(Math.random() * 0xFFFF).toString(16).padStart(4, '0')
   const counter = Math.floor(Math.random() * 0xFFFFFF).toString(16).padStart(6, '0')
   return timestamp + machineId + processId + counter
@@ -55,7 +55,7 @@ async function main() {
     create: {
       name: 'Soaps',
       slug: 'soaps',
-      image: 'https://via.placeholder.com/300',
+      image: '/placeholder.jpg',
     },
   })
 
@@ -65,7 +65,7 @@ async function main() {
     create: {
       name: 'Shampoos',
       slug: 'shampoos',
-      image: 'https://via.placeholder.com/300',
+      image: '/placeholder.jpg',
     },
   })
 
@@ -75,21 +75,70 @@ async function main() {
     create: {
       name: 'Body Care',
       slug: 'body-care',
-      image: 'https://via.placeholder.com/300',
+      image: '/placeholder.jpg',
+    },
+  })
+
+  const accessoriesCategory = await prisma.category.upsert({
+    where: { slug: 'accessories' },
+    update: {},
+    create: {
+      name: 'Accessories',
+      slug: 'accessories',
+      image: '/placeholder.jpg',
+    },
+  })
+
+  const conditionersCategory = await prisma.category.upsert({
+    where: { slug: 'conditioners' },
+    update: {},
+    create: {
+      name: 'Conditioners',
+      slug: 'conditioners',
+      image: '/placeholder.jpg',
+    },
+  })
+
+  const bodyWashCategory = await prisma.category.upsert({
+    where: { slug: 'body-wash' },
+    update: {},
+    create: {
+      name: 'Body Wash',
+      slug: 'body-wash',
+      image: '/placeholder.jpg',
     },
   })
 
   console.log('Created categories')
 
   // Create collections
+  const summerCollection = await prisma.collection.upsert({
+    where: { slug: 'summer-collection' },
+    update: {},
+    create: {
+      name: 'Summer Collection',
+      slug: 'summer-collection',
+      image: '/placeholder.jpg',
+    },
+  })
+
+  const winterCollection = await prisma.collection.upsert({
+    where: { slug: 'winter-collection' },
+    update: {},
+    create: {
+      name: 'Winter Collection',
+      slug: 'winter-collection',
+      image: '/placeholder.jpg',
+    },
+  })
+
   const bestSellersCollection = await prisma.collection.upsert({
     where: { slug: 'best-sellers' },
     update: {},
     create: {
       name: 'Best Sellers',
       slug: 'best-sellers',
-      description: 'Our most popular products',
-      image: 'https://via.placeholder.com/300',
+      image: '/placeholder.jpg',
     },
   })
 
@@ -99,8 +148,18 @@ async function main() {
     create: {
       name: 'New Arrivals',
       slug: 'new-arrivals',
-      description: 'Our latest products',
-      image: 'https://via.placeholder.com/300',
+      image: '/placeholder.jpg',
+    },
+  })
+
+  const premiumCollection = await prisma.collection.upsert({
+    where: { slug: 'premium' },
+    update: {},
+    create: {
+      name: 'Premium',
+      slug: 'premium',
+      description: 'Our premium quality products',
+      image: '/placeholder.jpg',
     },
   })
 
@@ -116,7 +175,7 @@ async function main() {
       name: 'Charcoal and Tree Body Soap',
       description: 'A natural soap made with activated charcoal to deeply cleanse and detoxify the skin.',
       price: 900,
-      images: ['https://via.placeholder.com/600'],
+      images: ['/placeholder.jpg'],
       weight: '90 gram',
       ingredients: 'Activated Charcoal, Tea Tree Oil, Coconut Oil, Olive Oil, Shea Butter, Lye, Water',
       benefits: ['Detoxifies skin', 'Removes impurities', 'Natural antibacterial properties'],
@@ -138,7 +197,7 @@ async function main() {
       description: 'A nourishing soap made with honey and oats to soothe and moisturize the skin.',
       price: 1000,
       discountedPrice: 900,
-      images: ['https://via.placeholder.com/600'],
+      images: ['/placeholder.jpg'],
       weight: '90 gram',
       ingredients: 'Honey, Oats, Beeswax, Shea Butter, Multani Mitti, Rosemary, Almond Oil, Castor Oil, Extra Virgin Olive Oil, Coconut Oil, Cinnamon essential oil, Citric Acid, Sugar, NaOH, distilled water and Lye.',
       benefits: ['Gently exfoliates dead skin cells', 'Moisturizes and nourishes the skin', 'Soothes irritated skin'],
@@ -147,6 +206,27 @@ async function main() {
       status: ProductStatus.ACTIVE,
       categoryId: soapCategory.id,
       collectionIds: [bestSellersCollection.id],
+    },
+  })
+
+  const milkSoapId = generateObjectId()
+  const milkSoap = await prisma.product.upsert({
+    where: { id: milkSoapId },
+    update: {},
+    create: {
+      id: milkSoapId,
+      name: 'Milk Soap',
+      description: 'Enriched with Cow milk, Yogurt, and a blend of essential oils.',
+      price: 900,
+      images: ['/placeholder.jpg'],
+      weight: '100 gram',
+      ingredients: 'Cow milk, Yogurt, Coconut Oil, Olive Oil, Essential Oils, Lye, Water',
+      benefits: ['Nourishes skin', 'Gentle cleansing', 'Suitable for sensitive skin'],
+      howToUse: 'Lather with water and apply to body. Rinse thoroughly.',
+      stock: 20,
+      status: ProductStatus.ACTIVE,
+      categoryId: soapCategory.id,
+      collectionIds: [],
     },
   })
 
@@ -159,7 +239,7 @@ async function main() {
       name: 'Coconut Milk Shampoo Bar',
       description: 'A solid shampoo bar made with coconut milk to nourish and strengthen hair.',
       price: 1200,
-      images: ['https://via.placeholder.com/600'],
+      images: ['/placeholder.jpg'],
       weight: '75 gram',
       ingredients: 'Coconut Milk, Castor Oil, Olive Oil, Cocoa Butter, Essential Oils, Lye, Water',
       benefits: ['Nourishes hair', 'Strengthens hair', 'Reduces plastic waste'],
@@ -168,6 +248,162 @@ async function main() {
       status: ProductStatus.ACTIVE,
       categoryId: shampoosCategory.id,
       collectionIds: [newArrivalsCollection.id],
+    },
+  })
+
+  const hairOilId = generateObjectId()
+  const hairOil = await prisma.product.upsert({
+    where: { id: hairOilId },
+    update: {},
+    create: {
+      id: hairOilId,
+      name: 'Hair Growth Oil',
+      description: 'Infused with Lavender, Black Seed Oil, and Rosemary Essential Oil.',
+      price: 1500,
+      discountedPrice: 1350,
+      images: ['/placeholder.jpg'],
+      weight: '100 ml',
+      ingredients: 'Lavender Oil, Black Seed Oil, Rosemary Essential Oil, Coconut Oil, Castor Oil',
+      benefits: ['Promotes hair growth', 'Strengthens hair follicles', 'Reduces hair fall'],
+      howToUse: 'Apply a small amount to scalp and massage gently. Leave on for at least 30 minutes or overnight for best results.',
+      stock: 8,
+      status: ProductStatus.ACTIVE,
+      categoryId: bodyCareCategory.id,
+      collectionIds: [bestSellersCollection.id],
+    },
+  })
+
+  const serumId = generateObjectId()
+  const serum = await prisma.product.upsert({
+    where: { id: serumId },
+    update: {},
+    create: {
+      id: serumId,
+      name: 'Anti-Aging Face Serum',
+      description: 'Luxurious serum with Castor oil, Jojoba oil, and Frankincense Essential Oil.',
+      price: 1500,
+      images: ['/placeholder.jpg'],
+      weight: '30 ml',
+      ingredients: 'Castor Oil, Jojoba Oil, Frankincense Essential Oil, Vitamin E',
+      benefits: ['Reduces fine lines', 'Hydrates skin', 'Improves skin elasticity'],
+      howToUse: 'Apply a few drops to clean face and neck. Gently massage in upward motions until absorbed.',
+      stock: 15,
+      status: ProductStatus.ACTIVE,
+      categoryId: bodyCareCategory.id,
+      collectionIds: [premiumCollection.id],
+    },
+  })
+
+  const dentalPowderId = generateObjectId()
+  const dentalPowder = await prisma.product.upsert({
+    where: { id: dentalPowderId },
+    update: {},
+    create: {
+      id: dentalPowderId,
+      name: 'Dental Powder',
+      description: 'Natural dental care with Bentonite Clay, Activated Charcoal, and herbs.',
+      price: 700,
+      images: ['/placeholder.jpg'],
+      weight: '50 gram',
+      ingredients: 'Bentonite Clay, Activated Charcoal, Neem Powder, Clove Oil, Peppermint Oil',
+      benefits: ['Natural teeth whitening', 'Freshens breath', 'Supports gum health'],
+      howToUse: 'Wet toothbrush and dip into powder. Brush teeth as normal and rinse thoroughly.',
+      stock: 5,
+      status: ProductStatus.ACTIVE,
+      categoryId: accessoriesCategory.id,
+      collectionIds: [],
+    },
+  })
+
+  const product8 = await prisma.product.upsert({
+    where: { slug: 'rose-water-toner' },
+    update: {},
+    create: {
+      name: 'Rose Water Toner',
+      slug: 'rose-water-toner',
+      description: 'Pure rose water toner to refresh and hydrate skin.',
+      price: 800,
+      images: ['/placeholder.jpg'],
+      weight: '100 ml',
+      ingredients: 'Pure Rose Water, Glycerin, Aloe Vera Extract',
+      stock: 50,
+      categoryId: bodyWashCategory.id,
+      collections: {
+        connect: [{ id: bestSellersCollection.id }],
+      },
+    },
+  })
+
+  const product9 = await prisma.product.upsert({
+    where: { slug: 'aloe-vera-gel' },
+    update: {},
+    create: {
+      name: 'Aloe Vera Gel',
+      slug: 'aloe-vera-gel',
+      description: 'Pure aloe vera gel for skin and hair.',
+      price: 650,
+      images: ['/placeholder.jpg'],
+      weight: '100 gram',
+      ingredients: 'Aloe Vera Extract, Vitamin E, Glycerin',
+      stock: 75,
+      categoryId: bodyWashCategory.id,
+      collections: {
+        connect: [{ id: newArrivalsCollection.id }],
+      },
+    },
+  })
+
+  const product10 = await prisma.product.upsert({
+    where: { slug: 'bamboo-soap-dish' },
+    update: {},
+    create: {
+      name: 'Bamboo Soap Dish',
+      slug: 'bamboo-soap-dish',
+      description: 'Eco-friendly bamboo soap dish to keep your soap dry.',
+      price: 350,
+      images: ['/placeholder.jpg'],
+      weight: '50 gram',
+      stock: 100,
+      categoryId: accessoriesCategory.id,
+      collections: {
+        connect: [{ id: bestSellersCollection.id }],
+      },
+    },
+  })
+
+  const product11 = await prisma.product.upsert({
+    where: { slug: 'sisal-soap-bag' },
+    update: {},
+    create: {
+      name: 'Sisal Soap Bag',
+      slug: 'sisal-soap-bag',
+      description: 'Natural sisal soap bag for exfoliation and extending soap life.',
+      price: 250,
+      images: ['/placeholder.jpg'],
+      weight: '20 gram',
+      stock: 150,
+      categoryId: accessoriesCategory.id,
+      collections: {
+        connect: [{ id: newArrivalsCollection.id }],
+      },
+    },
+  })
+
+  const product12 = await prisma.product.upsert({
+    where: { slug: 'wooden-hair-brush' },
+    update: {},
+    create: {
+      name: 'Wooden Hair Brush',
+      slug: 'wooden-hair-brush',
+      description: 'Natural wooden hair brush with wooden bristles.',
+      price: 1200,
+      images: ['/placeholder.jpg'],
+      weight: '100 gram',
+      stock: 50,
+      categoryId: accessoriesCategory.id,
+      collections: {
+        connect: [{ id: premiumCollection.id }],
+      },
     },
   })
 

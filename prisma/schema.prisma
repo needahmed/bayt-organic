@@ -240,3 +240,32 @@ enum DiscountType {
   PERCENTAGE
   FIXED
 }
+
+// Shipping settings models
+model ShippingRule {
+  id            String  @id @default(auto()) @map("_id") @db.ObjectId
+  minOrderValue Float
+  maxOrderValue Float?  // null means no upper limit
+  shippingCost  Float
+  settingsId    String  @db.ObjectId
+  settings      ShippingSettings @relation(fields: [settingsId], references: [id], onDelete: Cascade)
+}
+
+model ShippingZone {
+  id            String  @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  countries     String[]
+  shippingCost  Float
+  settingsId    String  @db.ObjectId
+  settings      ShippingSettings @relation(fields: [settingsId], references: [id], onDelete: Cascade)
+}
+
+model ShippingSettings {
+  id                    String         @id @default(auto()) @map("_id") @db.ObjectId
+  freeShippingThreshold Float?
+  internationalShipping Boolean        @default(false)
+  rules                 ShippingRule[]
+  zones                 ShippingZone[]
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+}
