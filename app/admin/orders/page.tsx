@@ -201,8 +201,7 @@ export default function OrdersPage() {
                   <TableHead className="w-12">
                     <Checkbox
                       checked={isAllSelected}
-                      // @ts-ignore - indeterminate is not in the type but works in the component
-                      indeterminate={isPartiallySelected}
+                      data-state={isPartiallySelected ? "indeterminate" : isAllSelected ? "checked" : "unchecked"}
                       onCheckedChange={handleSelectAll}
                     />
                   </TableHead>

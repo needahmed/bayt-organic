@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -11,19 +11,54 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { ChevronLeft, Upload } from "lucide-react"
-import React from 'react'
 import { toast } from "sonner"
-import { createCollection, CollectionFormData } from "@/app/actions/collections.action"
+import Image from "next/image"
+import { getCollectionById, updateCollection, CollectionFormData } from "@/app/actions/collections.action"
 
-export default function AddCollectionPage() {
+export default function EditCollectionPage({ params }: { params: { id: string } }) {
   const router = useRouter()
+  const id = params.id
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingCollection, setIsLoadingCollection] = useState(true)
   const [collectionData, setCollectionData] = useState({
     name: "",
     description: "",
     status: "active",
     featured: false,
+    image: ""
   })
+
+  // Load collection data
+  useEffect(() => {
+    const loadCollection = async () => {
+      try {
+        setIsLoadingCollection(true)
+        const result = await getCollectionById(id)
+        
+        if (!result.success || !result.data) {
+          toast.error(result.error || "Failed to load collection")
+          router.push("/admin/collections")
+          return
+        }
+        
+        const collection = result.data
+        setCollectionData({
+          name: collection.name,
+          description: collection.description || "",
+          status: "active", // Default value since it's not in the Collection type
+          featured: false, // Default value since it's not in the Collection type
+          image: collection.image || ""
+        })
+      } catch (error) {
+        console.error("Error loading collection:", error)
+        toast.error("Failed to load collection")
+      } finally {
+        setIsLoadingCollection(false)
+      }
+    }
+
+    loadCollection()
+  }, [id, router])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -65,27 +100,39 @@ export default function AddCollectionPage() {
         .replace(/[^\w\s]/gi, '')
         .replace(/\s+/g, '-');
 
-      // Create collection
+      // Create collection form data
       const collectionFormData: CollectionFormData = {
         name: collectionData.name,
         slug: slug,
         description: collectionData.description,
+        existingImage: collectionData.image
       }
 
-      const result = await createCollection(collectionFormData)
-
+      const result = await updateCollection(id, collectionFormData)
+      
       if (result.success) {
-        toast.success("Collection created successfully")
+        toast.success("Collection updated successfully")
         router.push("/admin/collections")
       } else {
-        toast.error(result.error || "Failed to create collection")
+        toast.error(result.error || "Failed to update collection")
       }
     } catch (error) {
-      console.error("Error creating collection:", error)
-      toast.error("An error occurred while creating the collection")
+      console.error("Error updating collection:", error)
+      toast.error("An error occurred while updating the collection")
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (isLoadingCollection) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-2">Loading collection...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -98,14 +145,14 @@ export default function AddCollectionPage() {
               Back
             </Link>
           </Button>
-          <h1 className="text-2xl font-bold tracking-tight">Add New Collection</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Edit Collection</h1>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => router.push("/admin/collections")}>
             Cancel
           </Button>
           <Button onClick={handleSubmit} className="bg-green-700 hover:bg-green-800 text-white" disabled={isLoading}>
-            {isLoading ? "Saving..." : "Save Collection"}
+            {isLoading ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </div>
@@ -113,7 +160,7 @@ export default function AddCollectionPage() {
       <Card>
         <CardHeader>
           <CardTitle>Collection Information</CardTitle>
-          <CardDescription>Create a new collection to organize your products</CardDescription>
+          <CardDescription>Update the collection details</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
@@ -171,20 +218,38 @@ export default function AddCollectionPage() {
 
           <div className="space-y-2">
             <Label>Collection Image</Label>
-            <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center">
-              <div className="mx-auto flex flex-col items-center justify-center">
-                <Upload className="h-10 w-10 text-gray-400 mb-2" />
-                <h3 className="text-gray-700 font-medium mb-1">Drag and drop an image</h3>
-                <p className="text-gray-500 text-sm mb-4">or click to browse</p>
-                <Button variant="outline" size="sm">
-                  Choose File
+            {collectionData.image ? (
+              <div className="relative aspect-video w-full h-48 mb-4 border rounded-md overflow-hidden">
+                <Image
+                  src={collectionData.image}
+                  alt={collectionData.name}
+                  fill
+                  className="object-cover"
+                />
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  className="absolute top-2 right-2"
+                  onClick={() => setCollectionData({...collectionData, image: ""})}
+                >
+                  Remove
                 </Button>
               </div>
-            </div>
+            ) : (
+              <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center">
+                <div className="mx-auto flex flex-col items-center justify-center">
+                  <Upload className="h-10 w-10 text-gray-400 mb-2" />
+                  <h3 className="text-gray-700 font-medium mb-1">Drag and drop an image</h3>
+                  <p className="text-gray-500 text-sm mb-4">or click to browse</p>
+                  <Button variant="outline" size="sm">
+                    Choose File
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
     </div>
   )
-}
-
+} 

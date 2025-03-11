@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,65 +18,57 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Plus, Search, MoreHorizontal, Edit, Trash, Eye, Package } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { getCollections } from "@/app/actions/collections.action"
+import { toast } from "sonner"
 
-// Sample collections data
-const collections = [
-  {
-    id: 1,
-    name: "Best Sellers",
-    description: "Our most popular products",
-    image: "/placeholder.svg?height=300&width=300",
-    productCount: 12,
-    status: "Active",
-    featured: true,
-  },
-  {
-    id: 2,
-    name: "New Arrivals",
-    description: "Recently added products",
-    image: "/placeholder.svg?height=300&width=300",
-    productCount: 8,
-    status: "Active",
-    featured: true,
-  },
-  {
-    id: 3,
-    name: "Premium",
-    description: "Luxury and high-end products",
-    image: "/placeholder.svg?height=300&width=300",
-    productCount: 5,
-    status: "Active",
-    featured: false,
-  },
-  {
-    id: 4,
-    name: "Gift Sets",
-    description: "Perfect for gifting",
-    image: "/placeholder.svg?height=300&width=300",
-    productCount: 4,
-    status: "Active",
-    featured: true,
-  },
-  {
-    id: 5,
-    name: "Seasonal",
-    description: "Limited time collections",
-    image: "/placeholder.svg?height=300&width=300",
-    productCount: 0,
-    status: "Draft",
-    featured: false,
-  },
-]
+// Define Collection type
+interface Collection {
+  id: string;
+  name: string;
+  description: string | null;
+  image: string | null;
+  slug: string;
+  _count?: {
+    products: number;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export default function CollectionsPage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCollections, setSelectedCollections] = useState<string[]>([])
+  const [collections, setCollections] = useState<Collection[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Fetch collections from the database
+  useEffect(() => {
+    const fetchCollections = async () => {
+      try {
+        setIsLoading(true)
+        const result = await getCollections()
+        
+        if (result.success) {
+          setCollections(result.data || [])
+        } else {
+          toast.error(result.error || "Failed to load collections")
+        }
+      } catch (error) {
+        console.error("Error fetching collections:", error)
+        toast.error("An error occurred while loading collections")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchCollections()
+  }, [])
 
   const filteredCollections = collections.filter(
     (collection) =>
       collection.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      collection.description.toLowerCase().includes(searchQuery.toLowerCase()),
+      (collection.description && collection.description.toLowerCase().includes(searchQuery.toLowerCase())),
   )
 
   const handleSelectAll = (checked: boolean) => {
@@ -144,8 +136,7 @@ export default function CollectionsPage() {
                   <TableHead className="w-12">
                     <Checkbox
                       checked={isAllSelected}
-                      // @ts-ignore - indeterminate is not in the type but works in the component
-                      indeterminate={isPartiallySelected}
+                      data-state={isPartiallySelected ? "indeterminate" : isAllSelected ? "checked" : "unchecked"}
                       onCheckedChange={handleSelectAll}
                     />
                   </TableHead>
@@ -159,10 +150,19 @@ export default function CollectionsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCollections.length === 0 ? (
+                {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                      No collections found
+                    <TableCell colSpan={8} className="h-24 text-center">
+                      <div className="flex flex-col items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-2"></div>
+                        <span>Loading collections...</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : filteredCollections.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="h-24 text-center">
+                      No collections found.
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -189,26 +189,18 @@ export default function CollectionsPage() {
                       <TableCell>
                         <div className="flex items-center">
                           <Package className="h-4 w-4 mr-1 text-muted-foreground" />
-                          <span>{collection.productCount}</span>
+                          <span>{collection._count?.products || 0}</span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <Badge
-                          className={
-                            collection.status === "Active"
-                              ? "bg-green-100 text-green-800 hover:bg-green-100"
-                              : "bg-amber-100 text-amber-800 hover:bg-amber-100"
-                          }
+                          className="bg-green-100 text-green-800 hover:bg-green-100"
                         >
-                          {collection.status}
+                          Active
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {collection.featured ? (
-                          <Badge className="bg-pink-100 text-pink-800 hover:bg-pink-100">Featured</Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">-</span>
-                        )}
+                        <span className="text-muted-foreground text-sm">-</span>
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>

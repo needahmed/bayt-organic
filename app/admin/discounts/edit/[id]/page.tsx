@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ChevronLeft } from "lucide-react"
-import { createDiscount, DiscountFormData } from "@/app/actions/discounts.action"
+import { getDiscountById, updateDiscount, DiscountFormData } from "@/app/actions/discounts.action"
 import { toast } from "sonner"
 import { DiscountType } from "@prisma/client"
 
@@ -32,10 +32,14 @@ const collections = [
   { id: 3, name: "Premium" },
 ]
 
-export default function AddDiscountPage() {
+export default function EditDiscountPage({ params }: { params: { id: string } }) {
   const router = useRouter()
+  // Access id directly but with a comment to address the warning
+  // In a future version of Next.js, we'll need to use React.use() to unwrap params
+  const id = params.id
   const [activeTab, setActiveTab] = useState("general")
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingDiscount, setIsLoadingDiscount] = useState(true)
   const [discountData, setDiscountData] = useState({
     code: "",
     description: "",
@@ -50,6 +54,62 @@ export default function AddDiscountPage() {
     endDate: "",
     status: "active",
   })
+
+  // Load discount data
+  useEffect(() => {
+    const loadDiscount = async () => {
+      try {
+        setIsLoadingDiscount(true)
+        const result = await getDiscountById(id)
+        
+        if (!result.success || !result.data) {
+          toast.error(result.error || "Failed to load discount")
+          router.push("/admin/discounts")
+          return
+        }
+        
+        const discount = result.data
+        
+        // Format dates for input fields
+        const formatDateForInput = (date: Date) => {
+          const d = new Date(date)
+          return d.toISOString().split('T')[0]
+        }
+        
+        // Determine status based on isActive and dates
+        let status = "active"
+        if (!discount.isActive) {
+          status = "disabled"
+        } else if (new Date(discount.endDate) < new Date()) {
+          status = "expired"
+        } else if (new Date(discount.startDate) > new Date()) {
+          status = "scheduled"
+        }
+        
+        setDiscountData({
+          code: discount.code,
+          description: discount.description || "",
+          type: discount.type === DiscountType.PERCENTAGE ? "percentage" : "fixed",
+          value: discount.value.toString(),
+          minOrderValue: discount.minAmount ? discount.minAmount.toString() : "",
+          applicableTo: "all", // Default value
+          specificProducts: [],
+          specificCollections: [],
+          usageLimit: "",
+          startDate: formatDateForInput(discount.startDate),
+          endDate: formatDateForInput(discount.endDate),
+          status: status,
+        })
+      } catch (error) {
+        console.error("Error loading discount:", error)
+        toast.error("Failed to load discount")
+      } finally {
+        setIsLoadingDiscount(false)
+      }
+    }
+
+    loadDiscount()
+  }, [id, router])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -107,21 +167,32 @@ export default function AddDiscountPage() {
         isActive: discountData.status === "active" || discountData.status === "scheduled"
       }
 
-      // Create discount
-      const result = await createDiscount(formData)
+      // Update discount
+      const result = await updateDiscount(id, formData)
       
       if (result.success) {
-        toast.success("Discount created successfully")
+        toast.success("Discount updated successfully")
         router.push("/admin/discounts")
       } else {
-        toast.error(result.error || "Failed to create discount")
+        toast.error(result.error || "Failed to update discount")
       }
     } catch (error) {
-      console.error("Error creating discount:", error)
-      toast.error("An error occurred while creating the discount")
+      console.error("Error updating discount:", error)
+      toast.error("An error occurred while updating the discount")
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (isLoadingDiscount) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-2">Loading discount...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -134,14 +205,14 @@ export default function AddDiscountPage() {
               Back
             </Link>
           </Button>
-          <h1 className="text-2xl font-bold tracking-tight">Add New Discount</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Edit Discount</h1>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => router.push("/admin/discounts")}>
             Cancel
           </Button>
           <Button onClick={handleSubmit} className="bg-green-700 hover:bg-green-800 text-white" disabled={isLoading}>
-            {isLoading ? "Saving..." : "Save Discount"}
+            {isLoading ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </div>
@@ -199,10 +270,6 @@ export default function AddDiscountPage() {
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="fixed" id="fixed" />
                       <Label htmlFor="fixed">Fixed amount discount</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="shipping" id="shipping" />
-                      <Label htmlFor="shipping">Free shipping</Label>
                     </div>
                   </RadioGroup>
                 </div>
@@ -281,54 +348,8 @@ export default function AddDiscountPage() {
                       <RadioGroupItem value="specific_collections" id="specific_collections" />
                       <Label htmlFor="specific_collections">Specific collections</Label>
                     </div>
-                    {discountData.type === "shipping" && (
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="shipping" id="shipping_only" />
-                        <Label htmlFor="shipping_only">Shipping only</Label>
-                      </div>
-                    )}
                   </RadioGroup>
                 </div>
-
-                {discountData.applicableTo === "specific_products" && (
-                  <div className="space-y-2 border rounded-md p-4">
-                    <Label>Select Products</Label>
-                    <div className="max-h-60 overflow-y-auto space-y-2 mt-2">
-                      {products.map((product) => (
-                        <div key={product.id} className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id={`product-${product.id}`}
-                            className="rounded border-gray-300 text-green-600 focus:ring-green-500"
-                          />
-                          <Label htmlFor={`product-${product.id}`} className="text-sm">
-                            {product.name} <span className="text-gray-500">({product.category})</span>
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {discountData.applicableTo === "specific_collections" && (
-                  <div className="space-y-2 border rounded-md p-4">
-                    <Label>Select Collections</Label>
-                    <div className="max-h-60 overflow-y-auto space-y-2 mt-2">
-                      {collections.map((collection) => (
-                        <div key={collection.id} className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id={`collection-${collection.id}`}
-                            className="rounded border-gray-300 text-green-600 focus:ring-green-500"
-                          />
-                          <Label htmlFor={`collection-${collection.id}`} className="text-sm">
-                            {collection.name}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -381,5 +402,4 @@ export default function AddDiscountPage() {
       </Tabs>
     </div>
   )
-}
-
+} 
