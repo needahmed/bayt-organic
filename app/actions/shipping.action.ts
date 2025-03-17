@@ -133,4 +133,104 @@ export async function updateShippingSettings(data: {
     console.error('Error updating shipping settings:', error)
     return { success: false, error: 'Failed to update shipping settings' }
   }
+}
+
+// Calculate shipping cost based on subtotal
+export async function calculateShippingCost(subtotal: number, countryCode?: string) {
+  try {
+    const settings = await getShippingSettings();
+    
+    if (!settings.success || !settings.data) {
+      return { 
+        success: false, 
+        error: 'Failed to get shipping settings',
+        shippingCost: 150, // Default shipping cost
+        freeShippingThreshold: 2000 // Default threshold
+      };
+    }
+    
+    const shippingSettings = settings.data;
+    const freeShippingThreshold = shippingSettings.freeShippingThreshold || 2000;
+    
+    // Check if order qualifies for free shipping
+    if (subtotal >= freeShippingThreshold) {
+      return { 
+        success: true, 
+        shippingCost: 0,
+        message: 'Free shipping',
+        freeShippingThreshold
+      };
+    }
+    
+    // For international shipping
+    if (countryCode && countryCode !== 'PK' && shippingSettings.internationalShipping) {
+      // Find the applicable shipping zone
+      const zone = shippingSettings.zones?.find((zone: any) => 
+        zone.countries.includes(countryCode)
+      );
+      
+      if (zone) {
+        return { 
+          success: true, 
+          shippingCost: zone.shippingCost,
+          message: `International shipping to ${zone.name}`,
+          freeShippingThreshold
+        };
+      } else {
+        return { 
+          success: false, 
+          error: 'No shipping available to your country',
+          shippingCost: 0,
+          freeShippingThreshold
+        };
+      }
+    }
+    
+    // For domestic shipping (Pakistan)
+    if (!shippingSettings.rules || shippingSettings.rules.length === 0) {
+      return { 
+        success: true, 
+        shippingCost: 150, // Default shipping cost
+        message: 'Standard shipping',
+        freeShippingThreshold
+      };
+    }
+    
+    // Find the applicable shipping rule based on order value
+    const applicableRule = shippingSettings.rules.find((rule: any) => {
+      const min = rule.minOrderValue || 0;
+      const max = rule.maxOrderValue;
+      
+      if (max === undefined || max === null) {
+        return subtotal >= min;
+      }
+      
+      return subtotal >= min && subtotal <= max;
+    });
+    
+    if (applicableRule) {
+      return { 
+        success: true, 
+        shippingCost: applicableRule.shippingCost,
+        message: applicableRule.shippingCost === 0 ? 'Free shipping' : 'Standard shipping',
+        freeShippingThreshold
+      };
+    } else {
+      // Default shipping cost if no rule applies
+      return { 
+        success: true, 
+        shippingCost: 150,
+        message: 'Standard shipping',
+        freeShippingThreshold
+      };
+    }
+  } catch (error) {
+    console.error('Error calculating shipping cost:', error);
+    return { 
+      success: false, 
+      error: 'Failed to calculate shipping cost',
+      shippingCost: 150, // Default shipping cost
+      freeShippingThreshold: 2000 // Default threshold
+    };
+  }
 } 

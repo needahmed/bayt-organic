@@ -1,71 +1,116 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { motion } from "framer-motion"
-import { ChevronLeft, Minus, Plus, ShoppingBag, Trash2, RefreshCw } from "lucide-react"
-import AnimatedLeaf from "@/components/animated-leaf"
+import { ChevronLeft, Minus, Plus, ShoppingBag, Trash2, RefreshCw, Leaf, Truck } from "lucide-react"
+import { useCart } from "@/app/context/CartContext"
+import { validateDiscountCode } from "@/app/actions/discounts.action"
+import { calculateShippingCost } from "@/app/actions/shipping.action"
+import { toast } from "sonner"
 
 export default function CartPage() {
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      name: "Honey & Oats Body Soap",
-      price: 1000,
-      quantity: 2,
-      image: "/placeholder.svg?height=300&width=300",
-      weight: "90 gram",
-    },
-    {
-      id: 2,
-      name: "Coconut Milk Shampoo Bar",
-      price: 1200,
-      quantity: 1,
-      image: "/placeholder.svg?height=300&width=300",
-      weight: "150 gram",
-    },
-    {
-      id: 3,
-      name: "Anti-Aging Face Serum",
-      price: 1500,
-      quantity: 1,
-      image: "/placeholder.svg?height=300&width=300",
-      weight: "30 ml",
-    },
-  ])
-
+  const { cartItems, updateItemQuantity, removeItem, subtotal, total, isLoading } = useCart()
   const [promoCode, setPromoCode] = useState("")
   const [promoApplied, setPromoApplied] = useState(false)
   const [discount, setDiscount] = useState(0)
+  const [discountType, setDiscountType] = useState("")
+  const [discountValue, setDiscountValue] = useState(0)
+  const [isApplyingPromo, setIsApplyingPromo] = useState(false)
+  const [shippingCost, setShippingCost] = useState(0)
+  const [shippingMessage, setShippingMessage] = useState("")
+  const [isLoadingShipping, setIsLoadingShipping] = useState(true)
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState(2000)
 
-  const updateQuantity = (id: string, newQuantity: number) => {
-    if (newQuantity < 1) return
+  useEffect(() => {
+    const loadShippingCost = async () => {
+      try {
+        setIsLoadingShipping(true);
+        const result = await calculateShippingCost(subtotal);
+        
+        if (result.success) {
+          setShippingCost(result.shippingCost);
+          setShippingMessage(result.message || "");
+          
+          // If we have shipping settings with a free shipping threshold, save it
+          if (result.freeShippingThreshold) {
+            setFreeShippingThreshold(result.freeShippingThreshold);
+          }
+        } else {
+          console.error("Failed to calculate shipping:", result.error);
+          toast.error("Failed to calculate shipping rates");
+          setShippingCost(150); // Default shipping cost
+        }
+      } catch (error) {
+        console.error("Error loading shipping cost:", error);
+        setShippingCost(150); // Default shipping cost
+      } finally {
+        setIsLoadingShipping(false);
+      }
+    };
 
-    setCartItems(cartItems.map((item) => (item.id.toString() === id ? { ...item, quantity: newQuantity } : item)))
-  }
-
-  const removeItem = (id: string) => {
-    setCartItems(cartItems.filter((item) => item.id.toString() !== id))
-  }
-
-  const applyPromoCode = () => {
-    if (promoCode.toLowerCase() === "bayt10") {
-      setPromoApplied(true)
-      setDiscount(subtotal * 0.1) // 10% discount
+    if (cartItems.length > 0) {
+      loadShippingCost();
     } else {
+      setShippingCost(0);
+      setIsLoadingShipping(false);
+    }
+  }, [subtotal, cartItems.length]);
+
+  const applyPromoCode = async () => {
+    if (!promoCode.trim()) {
+      toast.error("Please enter a promo code")
+      return
+    }
+    
+    setIsApplyingPromo(true)
+    
+    try {
+      const result = await validateDiscountCode(promoCode, subtotal)
+      
+      if (result.success && result.data) {
+        setPromoApplied(true)
+        setDiscount(result.data.discountAmount)
+        setDiscountType(result.data.discountType)
+        setDiscountValue(result.data.discountValue)
+        toast.success("Promo code applied successfully!")
+      } else {
+        setPromoApplied(false)
+        setDiscount(0)
+        setDiscountType("")
+        setDiscountValue(0)
+        toast.error(result.error || "Invalid promo code")
+      }
+    } catch (error) {
+      console.error("Error applying promo code:", error)
+      toast.error("Failed to apply promo code")
       setPromoApplied(false)
       setDiscount(0)
+    } finally {
+      setIsApplyingPromo(false)
     }
   }
 
-  const subtotal = cartItems.reduce((total, item) => total + item.price * item.quantity, 0)
+  const finalTotal = (total - discount) + shippingCost;
 
-  const shipping = subtotal > 2000 ? 0 : 150
-  const total = subtotal - discount + shipping
+  if (isLoading || isLoadingShipping) {
+    return (
+      <div className="pt-24 pb-16">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin h-8 w-8 border-4 border-green-700 border-t-transparent rounded-full mx-auto mb-4"></div>
+              <p className="text-green-700">Loading your cart...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="pt-24 pb-16">
@@ -124,7 +169,7 @@ export default function CartPage() {
                             <h3 className="font-medium text-green-800">{item.name}</h3>
                             <p className="text-sm text-green-600">Weight: {item.weight}</p>
                             <button
-                              onClick={() => removeItem(item.id.toString())}
+                              onClick={() => removeItem(item.id)}
                               className="text-pink-500 text-sm flex items-center mt-1 hover:text-pink-600"
                             >
                               <Trash2 className="h-3 w-3 mr-1" />
@@ -134,14 +179,14 @@ export default function CartPage() {
                         </div>
                         <div className="text-center text-green-700">
                           <span className="md:hidden font-medium text-green-800 mr-2">Price:</span>
-                          Rs. {item.price.toLocaleString()}
+                          Rs. {(item.discountedPrice || item.price).toLocaleString()}
                         </div>
                         <div className="flex items-center justify-center">
                           <div className="flex items-center border border-gray-200 rounded-md">
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => updateQuantity(item.id.toString(), item.quantity - 1)}
+                              onClick={() => updateItemQuantity(item.id, item.quantity - 1)}
                               className="h-8 w-8 rounded-none text-green-700"
                             >
                               <Minus className="h-3 w-3" />
@@ -150,7 +195,7 @@ export default function CartPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => updateQuantity(item.id.toString(), item.quantity + 1)}
+                              onClick={() => updateItemQuantity(item.id, item.quantity + 1)}
                               className="h-8 w-8 rounded-none text-green-700"
                             >
                               <Plus className="h-3 w-3" />
@@ -159,7 +204,7 @@ export default function CartPage() {
                         </div>
                         <div className="text-right font-medium text-green-800">
                           <span className="md:hidden font-medium text-green-800 mr-2">Total:</span>
-                          Rs. {(item.price * item.quantity).toLocaleString()}
+                          Rs. {((item.discountedPrice || item.price) * item.quantity).toLocaleString()}
                         </div>
                       </div>
                     </motion.div>
@@ -171,6 +216,7 @@ export default function CartPage() {
                 <Button
                   variant="outline"
                   className="border-green-700 text-green-700 hover:bg-green-50 inline-flex items-center"
+                  onClick={() => window.location.reload()}
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Update Cart
@@ -181,9 +227,14 @@ export default function CartPage() {
                     value={promoCode}
                     onChange={(e) => setPromoCode(e.target.value)}
                     className="w-32 md:w-40"
+                    disabled={isApplyingPromo}
                   />
-                  <Button onClick={applyPromoCode} className="bg-green-700 hover:bg-green-800 text-white">
-                    Apply
+                  <Button 
+                    onClick={applyPromoCode} 
+                    className="bg-green-700 hover:bg-green-800 text-white" 
+                    disabled={isApplyingPromo || !promoCode.trim()}
+                  >
+                    {isApplyingPromo ? "Applying..." : "Apply"}
                   </Button>
                 </div>
               </div>
@@ -204,18 +255,34 @@ export default function CartPage() {
                     </div>
                     {promoApplied && (
                       <div className="flex justify-between text-pink-500">
-                        <span>Discount (10%)</span>
+                        <span>
+                          {discountType === "PERCENTAGE" 
+                            ? `Discount (${discountValue}%)` 
+                            : "Discount (Fixed)"}
+                        </span>
                         <span>- Rs. {discount.toLocaleString()}</span>
                       </div>
                     )}
-                    <div className="flex justify-between">
-                      <span>Shipping</span>
-                      <span>{shipping === 0 ? "Free" : `Rs. ${shipping.toLocaleString()}`}</span>
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center">
+                        <Truck className="h-4 w-4 mr-2 text-green-600" />
+                        <span>Shipping</span>
+                      </div>
+                      <span>
+                        {shippingCost === 0 
+                          ? "Free" 
+                          : `Rs. ${shippingCost.toLocaleString()}`}
+                      </span>
                     </div>
+                    {shippingMessage && (
+                      <div className="text-sm text-green-600 italic text-right">
+                        {shippingMessage}
+                      </div>
+                    )}
                     <Separator className="my-2" />
                     <div className="flex justify-between font-bold text-green-800 text-lg">
                       <span>Total</span>
-                      <span>Rs. {total.toLocaleString()}</span>
+                      <span>Rs. {finalTotal.toLocaleString()}</span>
                     </div>
                   </div>
 
@@ -225,29 +292,15 @@ export default function CartPage() {
 
                   <div className="mt-6 space-y-2">
                     <div className="flex items-center text-sm text-green-700">
-                      <AnimatedLeaf className="h-4 w-4 mr-2" />
-                      <span>Free shipping on orders over Rs. 2000</span>
+                      <Leaf className="h-4 w-4 mr-2 text-green-600" />
+                      <span>Free shipping on orders over Rs. {freeShippingThreshold.toLocaleString()}</span>
                     </div>
                     <div className="flex items-center text-sm text-green-700">
-                      <AnimatedLeaf className="h-4 w-4 mr-2" delay={0.1} />
+                      <Leaf className="h-4 w-4 mr-2 text-green-600" />
                       <span>100% secure checkout</span>
-                    </div>
-                    <div className="flex items-center text-sm text-green-700">
-                      <AnimatedLeaf className="h-4 w-4 mr-2" delay={0.2} />
-                      <span>Handmade with love</span>
                     </div>
                   </div>
                 </div>
-              </div>
-
-              <div className="mt-6 bg-green-50 rounded-lg p-4">
-                <h3 className="font-medium text-green-800 mb-2">Need Help?</h3>
-                <p className="text-sm text-green-700 mb-2">
-                  Our customer service team is here to help you with any questions about your order.
-                </p>
-                <Link href="/contact" className="text-sm text-pink-500 hover:text-pink-600 font-medium">
-                  Contact Us
-                </Link>
               </div>
             </motion.div>
           </div>
@@ -256,18 +309,15 @@ export default function CartPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
-            className="text-center py-16"
+            className="bg-white rounded-lg shadow-md p-8 text-center"
           >
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-green-50 rounded-full mb-6">
-              <ShoppingBag className="h-10 w-10 text-green-700" />
+            <div className="flex justify-center mb-4">
+              <ShoppingBag className="h-16 w-16 text-green-200" />
             </div>
-            <h2 className="font-playfair text-2xl font-bold text-green-800 mb-2">Your Cart is Empty</h2>
-            <p className="text-green-700 mb-6 max-w-md mx-auto">
-              Looks like you haven't added any products to your cart yet. Explore our collection to find natural
-              products you'll love.
-            </p>
+            <h2 className="font-playfair text-2xl font-bold text-green-800 mb-2">Your cart is empty</h2>
+            <p className="text-green-600 mb-6">Looks like you haven't added any products to your cart yet.</p>
             <Button asChild className="bg-green-700 hover:bg-green-800 text-white">
-              <Link href="/">Start Shopping</Link>
+              <Link href="/products">Start Shopping</Link>
             </Button>
           </motion.div>
         )}

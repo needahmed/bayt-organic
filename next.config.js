@@ -21,6 +21,17 @@ const nextConfig = {
       },
     ],
   },
+  webpack: (config) => {
+    config.resolve.fallback = {
+      fs: false,
+      path: false,
+      os: false,
+      crypto: false,
+      util: false,
+      child_process: false,
+    };
+    return config;
+  },
 }
 
 module.exports = nextConfig 

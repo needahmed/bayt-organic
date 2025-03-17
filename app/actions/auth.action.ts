@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { hashPassword, verifyPassword } from '@/lib/auth-utils'
 import { revalidatePath } from 'next/cache'
 import crypto from 'crypto'
+import { auth } from "@/auth"
 
 // Types for auth operations
 export type SignUpFormData = {
@@ -194,5 +195,28 @@ export async function changePassword(userId: string, currentPassword: string, ne
   } catch (error) {
     console.error(`Error changing password for user ${userId}:`, error)
     return { success: false, error: 'Failed to change password' }
+  }
+}
+
+export async function getCurrentUser() {
+  try {
+    const session = await auth()
+    
+    if (session?.user?.id) {
+      return { 
+        success: true, 
+        data: {
+          id: session.user.id,
+          name: session.user.name || '',
+          email: session.user.email || '',
+          role: session.user.role || 'CUSTOMER',
+        }
+      }
+    }
+    
+    return { success: false, error: 'Not authenticated' }
+  } catch (error) {
+    console.error('Error getting current user:', error)
+    return { success: false, error: 'Failed to get user' }
   }
 } 

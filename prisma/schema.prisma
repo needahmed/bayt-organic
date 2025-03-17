@@ -153,12 +153,12 @@ model CartItem {
 model Order {
   id              String      @id @default(auto()) @map("_id") @db.ObjectId
   orderNumber     String      @unique
-  userId          String      @db.ObjectId
-  user            User        @relation(fields: [userId], references: [id])
+  userId          String?     @db.ObjectId
+  user            User?       @relation(fields: [userId], references: [id])
   items           OrderItem[]
   status          OrderStatus @default(PENDING)
-  shippingAddress Address     @relation(fields: [addressId], references: [id])
-  addressId       String      @db.ObjectId
+  shippingAddress Address?    @relation(fields: [addressId], references: [id])
+  addressId       String?     @db.ObjectId
   subtotal        Float
   shipping        Float
   discount        Float       @default(0)
@@ -198,8 +198,8 @@ enum PaymentStatus {
 
 model Address {
   id         String  @id @default(auto()) @map("_id") @db.ObjectId
-  userId     String  @db.ObjectId
-  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String? @db.ObjectId
+  user       User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
   name       String
   phone      String
   address    String

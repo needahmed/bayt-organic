@@ -19,6 +19,7 @@ import {
   ChevronRight,
   X,
   Star,
+  Truck,
 } from "lucide-react"
 import { handleLogout } from "@/app/actions/user.actions"
 import { useToast } from "@/components/ui/use-toast"
@@ -53,6 +54,11 @@ const menuItems = [
     title: "Orders",
     href: "/admin/orders",
     icon: <ShoppingCart className="h-5 w-5" />,
+  },
+  {
+    title: "Shipping",
+    href: "/admin/shipping",
+    icon: <Truck className="h-5 w-5" />,
   },
   {
     title: "Settings",

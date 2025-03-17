@@ -18,6 +18,57 @@ export type DiscountFormData = {
   applicableTo?: string
 }
 
+// Validate a discount code
+export async function validateDiscountCode(code: string, subtotal: number) {
+  try {
+    // Find the discount by code
+    const discount = await prisma.discount.findFirst({
+      where: { 
+        code: code,
+        isActive: true,
+      },
+    })
+    
+    if (!discount) {
+      return { success: false, error: 'Invalid discount code' }
+    }
+    
+    // Check if discount is expired
+    const now = new Date()
+    if (discount.startDate > now || discount.endDate < now) {
+      return { success: false, error: 'Discount code is expired or not yet active' }
+    }
+    
+    // Check minimum order value
+    if (discount.minAmount && subtotal < discount.minAmount) {
+      return { 
+        success: false, 
+        error: `Minimum order amount of Rs. ${discount.minAmount} required for this discount` 
+      }
+    }
+    
+    // Calculate discount amount
+    let discountAmount = 0
+    if (discount.type === 'PERCENTAGE') {
+      discountAmount = subtotal * (discount.value / 100)
+    } else if (discount.type === 'FIXED') {
+      discountAmount = discount.value
+    }
+    
+    return { 
+      success: true, 
+      data: {
+        discountAmount,
+        discountType: discount.type,
+        discountValue: discount.value
+      } 
+    }
+  } catch (error) {
+    console.error('Error validating discount code:', error)
+    return { success: false, error: 'Failed to validate discount code' }
+  }
+}
+
 // Get all discounts
 export async function getDiscounts() {
   try {

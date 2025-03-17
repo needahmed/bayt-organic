@@ -216,8 +216,8 @@ export default function CollectionsPage() {
                               <Eye className="mr-2 h-4 w-4" />
                               View
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => router.push(`/admin/collections/edit/${collection.id}`)}>
-                              <Edit className="mr-2 h-4 w-4" />
+                            <DropdownMenuItem onClick={() => router.push(`/admin/collections/edit-collection?id=${collection.id}`)}>
+                              <Edit className="h-4 w-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>

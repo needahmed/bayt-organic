@@ -12,3 +12,5 @@ app/admin/collections/edit/[id]/page.tsx (21:21) @ id
   24 |   const [collectionData, setCollectionData] = useState({
 
     please make sure you dont write code that leads to these errors.
+
+Do not change UI, design or components like that or simplify them, do not remove animations as well.

@@ -251,8 +251,8 @@ export default function DiscountsPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => router.push(`/admin/discounts/edit/${discount.id}`)}>
-                              <Edit className="mr-2 h-4 w-4" />
+                            <DropdownMenuItem onClick={() => router.push(`/admin/discounts/edit-discount?id=${discount.id}`)}>
+                              <Edit className="h-4 w-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => navigator.clipboard.writeText(discount.code)}>

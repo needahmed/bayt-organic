@@ -17,11 +17,13 @@ import {
 import { ShoppingBag, Menu, X, Search, User } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
+import { useCart } from "@/app/context/CartContext"
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
+  const { itemCount } = useCart()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -126,11 +128,17 @@ export default function Header() {
               <User className="h-5 w-5" />
             </Link>
           </Button>
-          <Button variant="ghost" size="icon" className="text-green-700">
-            <ShoppingBag className="h-5 w-5" />
-            <span className="absolute top-0 right-0 bg-pink-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-              0
-            </span>
+          <Button variant="ghost" size="icon" className="text-green-700" asChild>
+            <Link href="/cart">
+              <div className="relative">
+                <ShoppingBag className="h-5 w-5" />
+                {itemCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {itemCount > 99 ? '99+' : itemCount}
+                  </span>
+                )}
+              </div>
+            </Link>
           </Button>
         </div>
 
@@ -201,11 +209,17 @@ export default function Header() {
                     <User className="h-5 w-5" />
                   </Link>
                 </Button>
-                <Button variant="ghost" size="icon" className="text-green-700">
-                  <ShoppingBag className="h-5 w-5" />
-                  <span className="absolute top-0 right-0 bg-pink-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                    0
-                  </span>
+                <Button variant="ghost" size="icon" className="text-green-700" asChild>
+                  <Link href="/cart">
+                    <div className="relative">
+                      <ShoppingBag className="h-5 w-5" />
+                      {itemCount > 0 && (
+                        <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                          {itemCount > 99 ? '99+' : itemCount}
+                        </span>
+                      )}
+                    </div>
+                  </Link>
                 </Button>
               </div>
             </div>

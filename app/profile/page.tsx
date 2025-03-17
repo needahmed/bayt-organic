@@ -284,6 +284,7 @@ export default function ProfilePage() {
                     <TabsTrigger
                       value="orders"
                       className="justify-start data-[state=active]:bg-green-50 data-[state=active]:text-green-800 w-full"
+                      onClick={() => router.push('/dashboard/orders')}
                     >
                       <Package className="h-4 w-4 mr-2" />
                       Orders

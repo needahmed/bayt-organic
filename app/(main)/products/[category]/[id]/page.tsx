@@ -11,6 +11,7 @@ import { motion } from "framer-motion"
 import { ChevronLeft, Minus, Plus, Star, Truck, Shield, AlertCircle } from "lucide-react"
 import { getProductById } from "@/app/actions/products.action"
 import { Product, Category, Collection } from "@prisma/client"
+import { useCart } from "@/app/context/CartContext"
 
 // Define the product type with related entities
 type ProductWithRelations = Product & {
@@ -29,6 +30,8 @@ export default function ProductPage({ params }: { params: any }) {
   const [selectedImage, setSelectedImage] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isAddingToCart, setIsAddingToCart] = useState(false)
+  const { addItem } = useCart()
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -58,6 +61,27 @@ export default function ProductPage({ params }: { params: any }) {
   const decrementQuantity = () => {
     if (quantity > 1) {
       setQuantity(quantity - 1)
+    }
+  }
+
+  const handleAddToCart = async () => {
+    if (!product) return
+    
+    setIsAddingToCart(true)
+    try {
+      await addItem({
+        productId: product.id,
+        name: product.name,
+        price: product.price,
+        discountedPrice: product.discountedPrice,
+        quantity: quantity,
+        image: product.images[0] || "/placeholder.svg",
+        weight: product.weight || "N/A"
+      })
+    } catch (error) {
+      console.error("Error adding to cart:", error)
+    } finally {
+      setIsAddingToCart(false)
     }
   }
 
@@ -187,7 +211,20 @@ export default function ProductPage({ params }: { params: any }) {
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
-                <Button className="bg-green-700 hover:bg-green-800 text-white flex-1">Add to Cart</Button>
+                <Button 
+                  className="bg-green-700 hover:bg-green-800 text-white flex-1"
+                  onClick={handleAddToCart}
+                  disabled={isAddingToCart}
+                >
+                  {isAddingToCart ? (
+                    <>
+                      <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>
+                      Adding...
+                    </>
+                  ) : (
+                    "Add to Cart"
+                  )}
+                </Button>
               </div>
 
               <div className="space-y-4 mb-8">

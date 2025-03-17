@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -15,91 +15,45 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Search, MoreHorizontal, Eye, Printer, Package, Truck, CheckCircle, XCircle, Filter } from "lucide-react"
-
-// Sample orders data
-const orders = [
-  {
-    id: "ORD-001",
-    customer: "Sarah M.",
-    email: "sarah@example.com",
-    date: "2023-07-15",
-    total: 3700,
-    items: 3,
-    paymentStatus: "Paid",
-    fulfillmentStatus: "Delivered",
-  },
-  {
-    id: "ORD-002",
-    customer: "Ahmed K.",
-    email: "ahmed@example.com",
-    date: "2023-07-14",
-    total: 2100,
-    items: 2,
-    paymentStatus: "Paid",
-    fulfillmentStatus: "Shipped",
-  },
-  {
-    id: "ORD-003",
-    customer: "Layla R.",
-    email: "layla@example.com",
-    date: "2023-07-13",
-    total: 4500,
-    items: 4,
-    paymentStatus: "Paid",
-    fulfillmentStatus: "Processing",
-  },
-  {
-    id: "ORD-004",
-    customer: "Tariq A.",
-    email: "tariq@example.com",
-    date: "2023-07-12",
-    total: 1800,
-    items: 1,
-    paymentStatus: "Pending",
-    fulfillmentStatus: "Unfulfilled",
-  },
-  {
-    id: "ORD-005",
-    customer: "Zainab H.",
-    email: "zainab@example.com",
-    date: "2023-07-11",
-    total: 2800,
-    items: 3,
-    paymentStatus: "Failed",
-    fulfillmentStatus: "Cancelled",
-  },
-  {
-    id: "ORD-006",
-    customer: "Omar J.",
-    email: "omar@example.com",
-    date: "2023-07-10",
-    total: 3200,
-    items: 2,
-    paymentStatus: "Refunded",
-    fulfillmentStatus: "Returned",
-  },
-  {
-    id: "ORD-007",
-    customer: "Fatima S.",
-    email: "fatima@example.com",
-    date: "2023-07-09",
-    total: 1500,
-    items: 1,
-    paymentStatus: "Paid",
-    fulfillmentStatus: "Delivered",
-  },
-]
+import { Search, MoreHorizontal, Eye, Printer, Package, Truck, CheckCircle, XCircle, Filter, Loader2, Clock } from "lucide-react"
+import { getOrders, updateOrderStatus, updatePaymentStatus } from "@/app/actions/orders.action"
+import { toast } from "sonner"
+import Link from "next/link"
 
 export default function OrdersPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedOrders, setSelectedOrders] = useState<string[]>([])
+  const [orders, setOrders] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isUpdating, setIsUpdating] = useState(false)
+
+  useEffect(() => {
+    const loadOrders = async () => {
+      try {
+        setIsLoading(true)
+        const result = await getOrders()
+        
+        if (result.success && result.data) {
+          setOrders(result.data)
+        } else {
+          toast.error(result.error || "Failed to load orders")
+        }
+      } catch (error) {
+        console.error("Error loading orders:", error)
+        toast.error("An error occurred while loading orders")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    loadOrders()
+  }, [])
 
   const filteredOrders = orders.filter(
     (order) =>
-      order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.email.toLowerCase().includes(searchQuery.toLowerCase()),
+      order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.user?.email?.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
   const handleSelectAll = (checked: boolean) => {
@@ -118,23 +72,74 @@ export default function OrdersPage() {
     }
   }
 
+  const handleUpdateOrderStatus = async (orderId: string, status: string) => {
+    try {
+      setIsUpdating(true)
+      const result = await updateOrderStatus(orderId, status as any)
+      
+      if (result.success) {
+        toast.success(`Order status updated to ${status}`)
+        // Update the order in the local state
+        setOrders(orders.map(order => 
+          order.id === orderId ? { ...order, status } : order
+        ))
+      } else {
+        toast.error(result.error || "Failed to update order status")
+      }
+    } catch (error) {
+      console.error("Error updating order status:", error)
+      toast.error("An error occurred while updating order status")
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const handleUpdatePaymentStatus = async (orderId: string, paymentStatus: string) => {
+    try {
+      setIsUpdating(true)
+      const result = await updatePaymentStatus(orderId, paymentStatus as any)
+      
+      if (result.success) {
+        toast.success(`Payment status updated to ${paymentStatus}`)
+        // Update the order in the local state
+        setOrders(orders.map(order => 
+          order.id === orderId ? { ...order, paymentStatus } : order
+        ))
+      } else {
+        toast.error(result.error || "Failed to update payment status")
+      }
+    } catch (error) {
+      console.error("Error updating payment status:", error)
+      toast.error("An error occurred while updating payment status")
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
   const isAllSelected = filteredOrders.length > 0 && selectedOrders.length === filteredOrders.length
   const isPartiallySelected = selectedOrders.length > 0 && !isAllSelected
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    }).format(date)
+  }
+
   const getFulfillmentStatusBadge = (status: string) => {
     switch (status) {
-      case "Delivered":
+      case "DELIVERED":
         return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Delivered</Badge>
-      case "Shipped":
+      case "SHIPPED":
         return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Shipped</Badge>
-      case "Processing":
+      case "PROCESSING":
         return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Processing</Badge>
-      case "Unfulfilled":
-        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Unfulfilled</Badge>
-      case "Cancelled":
+      case "PENDING":
+        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Pending</Badge>
+      case "CANCELLED":
         return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Cancelled</Badge>
-      case "Returned":
-        return <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">Returned</Badge>
       default:
         return <Badge>{status}</Badge>
     }
@@ -142,13 +147,13 @@ export default function OrdersPage() {
 
   const getPaymentStatusBadge = (status: string) => {
     switch (status) {
-      case "Paid":
+      case "PAID":
         return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Paid</Badge>
-      case "Pending":
+      case "PENDING":
         return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Pending</Badge>
-      case "Failed":
+      case "FAILED":
         return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Failed</Badge>
-      case "Refunded":
+      case "REFUNDED":
         return <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">Refunded</Badge>
       default:
         return <Badge>{status}</Badge>
@@ -194,99 +199,149 @@ export default function OrdersPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox
-                      checked={isAllSelected}
-                      data-state={isPartiallySelected ? "indeterminate" : isAllSelected ? "checked" : "unchecked"}
-                      onCheckedChange={handleSelectAll}
-                    />
-                  </TableHead>
-                  <TableHead>Order</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Items</TableHead>
-                  <TableHead>Payment</TableHead>
-                  <TableHead>Fulfillment</TableHead>
-                  <TableHead className="w-12">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredOrders.length === 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-green-700" />
+              <span className="ml-2 text-green-700">Loading orders...</span>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                      No orders found
-                    </TableCell>
+                    <TableHead className="w-12">
+                      <Checkbox
+                        checked={isAllSelected}
+                        data-state={isPartiallySelected ? "indeterminate" : isAllSelected ? "checked" : "unchecked"}
+                        onCheckedChange={handleSelectAll}
+                      />
+                    </TableHead>
+                    <TableHead>Order</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Items</TableHead>
+                    <TableHead>Payment</TableHead>
+                    <TableHead>Fulfillment</TableHead>
+                    <TableHead className="w-12">Actions</TableHead>
                   </TableRow>
-                ) : (
-                  filteredOrders.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedOrders.includes(order.id)}
-                          onCheckedChange={(checked: boolean) => handleSelectOrder(checked, order.id)}
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium">{order.id}</TableCell>
-                      <TableCell>{order.date}</TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{order.customer}</div>
-                          <div className="text-xs text-muted-foreground">{order.email}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>Rs. {order.total.toLocaleString()}</TableCell>
-                      <TableCell>{order.items}</TableCell>
-                      <TableCell>{getPaymentStatusBadge(order.paymentStatus)}</TableCell>
-                      <TableCell>{getFulfillmentStatusBadge(order.fulfillmentStatus)}</TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Printer className="mr-2 h-4 w-4" />
-                              Print Invoice
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem>
-                              <Package className="mr-2 h-4 w-4" />
-                              Mark as Processed
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Truck className="mr-2 h-4 w-4" />
-                              Mark as Shipped
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <CheckCircle className="mr-2 h-4 w-4" />
-                              Mark as Delivered
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-600">
-                              <XCircle className="mr-2 h-4 w-4" />
-                              Cancel Order
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                </TableHeader>
+                <TableBody>
+                  {filteredOrders.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                        No orders found
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  ) : (
+                    filteredOrders.map((order) => (
+                      <TableRow key={order.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedOrders.includes(order.id)}
+                            onCheckedChange={(checked: boolean) => handleSelectOrder(checked, order.id)}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium">{order.orderNumber}</TableCell>
+                        <TableCell>{formatDate(order.createdAt)}</TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{order.user?.name || "Unknown"}</div>
+                            <div className="text-xs text-muted-foreground">{order.user?.email || "No email"}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>Rs. {order.total.toLocaleString()}</TableCell>
+                        <TableCell>{order.items.length}</TableCell>
+                        <TableCell>{getPaymentStatusBadge(order.paymentStatus)}</TableCell>
+                        <TableCell>{getFulfillmentStatusBadge(order.status)}</TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" disabled={isUpdating}>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuItem asChild>
+                                <Link href={`/admin/orders/${order.id}`}>
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  View Details
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuLabel>Update Status</DropdownMenuLabel>
+                              <DropdownMenuItem 
+                                onClick={() => handleUpdateOrderStatus(order.id, "PENDING")}
+                                disabled={order.status === "PENDING" || isUpdating}
+                              >
+                                <Clock className="mr-2 h-4 w-4 text-gray-500" />
+                                Pending
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleUpdateOrderStatus(order.id, "PROCESSING")}
+                                disabled={order.status === "PROCESSING" || isUpdating}
+                              >
+                                <Package className="mr-2 h-4 w-4 text-blue-500" />
+                                Processing
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleUpdateOrderStatus(order.id, "SHIPPED")}
+                                disabled={order.status === "SHIPPED" || isUpdating}
+                              >
+                                <Truck className="mr-2 h-4 w-4 text-purple-500" />
+                                Shipped
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleUpdateOrderStatus(order.id, "DELIVERED")}
+                                disabled={order.status === "DELIVERED" || isUpdating}
+                              >
+                                <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
+                                Delivered
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleUpdateOrderStatus(order.id, "CANCELLED")}
+                                disabled={order.status === "CANCELLED" || isUpdating}
+                              >
+                                <XCircle className="mr-2 h-4 w-4 text-red-500" />
+                                Cancelled
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuLabel>Payment Status</DropdownMenuLabel>
+                              <DropdownMenuItem 
+                                onClick={() => handleUpdatePaymentStatus(order.id, "PENDING")}
+                                disabled={order.paymentStatus === "PENDING" || isUpdating}
+                              >
+                                Pending
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleUpdatePaymentStatus(order.id, "PAID")}
+                                disabled={order.paymentStatus === "PAID" || isUpdating}
+                              >
+                                Paid
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleUpdatePaymentStatus(order.id, "FAILED")}
+                                disabled={order.paymentStatus === "FAILED" || isUpdating}
+                              >
+                                Failed
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleUpdatePaymentStatus(order.id, "REFUNDED")}
+                                disabled={order.paymentStatus === "REFUNDED" || isUpdating}
+                              >
+                                Refunded
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

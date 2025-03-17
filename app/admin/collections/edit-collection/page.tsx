@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,9 +16,11 @@ import Image from "next/image"
 import { getCollectionById, updateCollection, CollectionFormData } from "@/app/actions/collections.action"
 import { ManageCollectionProducts } from "@/components/admin/manage-collection-products"
 
-export default function EditCollectionPage({ params }: { params: { id: string } }) {
+export default function EditCollectionPage() {
   const router = useRouter()
-  const id = params.id
+  const searchParams = useSearchParams()
+  const id = searchParams.get('id')
+  
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingCollection, setIsLoadingCollection] = useState(true)
   const [collectionData, setCollectionData] = useState({
@@ -31,6 +33,12 @@ export default function EditCollectionPage({ params }: { params: { id: string } 
 
   // Load collection data
   useEffect(() => {
+    if (!id) {
+      toast.error("Collection ID is required")
+      router.push("/admin/collections")
+      return
+    }
+    
     const loadCollection = async () => {
       try {
         setIsLoadingCollection(true)
@@ -85,6 +93,12 @@ export default function EditCollectionPage({ params }: { params: { id: string } 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (!id) {
+      toast.error("Collection ID is required")
+      return
+    }
+    
     setIsLoading(true)
 
     try {
@@ -252,15 +266,17 @@ export default function EditCollectionPage({ params }: { params: { id: string } 
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Collection Products</CardTitle>
-          <CardDescription>Manage the products in this collection</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ManageCollectionProducts collectionId={id} />
-        </CardContent>
-      </Card>
+      {id && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Collection Products</CardTitle>
+            <CardDescription>Manage the products in this collection</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ManageCollectionProducts collectionId={id} />
+          </CardContent>
+        </Card>
+      )}
 
       <div className="flex items-center gap-2 justify-end">
         <Button variant="outline" onClick={() => router.push("/admin/collections")}>
