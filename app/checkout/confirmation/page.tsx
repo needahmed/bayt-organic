@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
@@ -12,7 +12,7 @@ import { CheckCircle, ChevronLeft, Package, Truck, Clock, AlertCircle } from "lu
 import { getOrderById } from "@/app/actions/orders.action"
 import { toast } from "sonner"
 
-export default function ConfirmationPage() {
+function OrderConfirmation() {
   const searchParams = useSearchParams()
   const orderId = searchParams.get("orderId")
   const [order, setOrder] = useState<any>(null)
@@ -347,6 +347,26 @@ export default function ConfirmationPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// Wrap the component in Suspense
+export default function ConfirmationPage() {
+  return (
+    <Suspense fallback={
+      <div className="pt-24 pb-16">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin h-8 w-8 border-4 border-green-700 border-t-transparent rounded-full mx-auto mb-4"></div>
+              <p className="text-green-700">Loading order details...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <OrderConfirmation />
+    </Suspense>
   )
 }
 

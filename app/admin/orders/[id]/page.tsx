@@ -27,7 +27,7 @@ import Image from "next/image"
 //   ...
 // }
 
-export default function OrderDetailsPage({ params }: { params: { id: string } }) {
+export default function OrderDetailsPage({ params }: { params: any }) {
   // For now, access params.id directly as it's still supported for migration
   // In a future version of Next.js, we'll need to use React.use() to unwrap the params
   const [order, setOrder] = useState<any>(null)

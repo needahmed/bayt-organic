@@ -13,7 +13,7 @@ import Image from "next/image"
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 
-export default function UserOrderDetailsPage({ params }: { params: { id: string } }) {
+export default function UserOrderDetailsPage({ params }: { params: any }) {
   const [order, setOrder] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isAuthorized, setIsAuthorized] = useState(true)

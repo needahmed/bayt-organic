@@ -29,6 +29,7 @@ const nextConfig = {
       crypto: false,
       util: false,
       child_process: false,
+      async_hooks: false,
     };
     return config;
   },
