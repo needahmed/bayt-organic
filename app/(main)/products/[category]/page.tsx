@@ -19,6 +19,11 @@ type ProductWithRelations = Product & {
   category: Category;
 };
 
+// Define an extended Category type with subcategories
+type CategoryWithSubcategories = Category & {
+  subcategories?: CategoryWithSubcategories[];
+};
+
 export default function CategoryPage({ params }: { params: any }) {
   // Use React.use() to unwrap the params Promise
   const unwrappedParams = use(params) as any
@@ -26,7 +31,8 @@ export default function CategoryPage({ params }: { params: any }) {
   
   const [sortOption, setSortOption] = useState("featured")
   const [products, setProducts] = useState<ProductWithRelations[]>([])
-  const [categoryInfo, setCategoryInfo] = useState<Category | null>(null)
+  const [categoryInfo, setCategoryInfo] = useState<CategoryWithSubcategories | null>(null)
+  const [subcategories, setSubcategories] = useState<CategoryWithSubcategories[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -50,9 +56,27 @@ export default function CategoryPage({ params }: { params: any }) {
           if (currentCategory) {
             setCategoryInfo(currentCategory)
             
-            // Filter products by category
+            // Get subcategories for the current category
+            const categorySubcategories = categoriesResult.data.filter(
+              (cat: Category) => cat.parentId === currentCategory.id
+            );
+            setSubcategories(categorySubcategories);
+            
+            // Filter products by category (including products from subcategories)
             const categoryProducts = productsResult.data.filter(
-              (product: ProductWithRelations) => product.categoryId === currentCategory.id
+              (product: ProductWithRelations) => {
+                // Include products from this category
+                if (product.categoryId === currentCategory.id) {
+                  return true;
+                }
+                
+                // Include products from subcategories
+                if (categorySubcategories.some(sub => sub.id === product.categoryId)) {
+                  return true;
+                }
+                
+                return false;
+              }
             )
             
             // Sort products based on selected option
@@ -136,6 +160,20 @@ export default function CategoryPage({ params }: { params: any }) {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
             <h1 className="font-playfair text-3xl md:text-4xl font-bold text-green-800 mb-2">{title}</h1>
             <p className="text-green-700 max-w-3xl">{description}</p>
+            
+            {/* Subcategories badges */}
+            {subcategories.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-4">
+                <span className="text-sm font-medium text-green-700">Subcategories:</span>
+                {subcategories.map((subcat) => (
+                  <Link href={`/products/${subcat.slug}`} key={subcat.id}>
+                    <Badge className="bg-green-100 text-green-800 hover:bg-green-200 cursor-pointer">
+                      {subcat.name}
+                    </Badge>
+                  </Link>
+                ))}
+              </div>
+            )}
           </motion.div>
         </div>
 

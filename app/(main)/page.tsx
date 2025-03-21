@@ -11,6 +11,7 @@ import { Leaf, Droplets, ShieldCheck, Recycle, Heart, Sparkles } from "lucide-re
 import { getCollectionBySlug } from "@/app/actions/collections.action"
 import { ensureFeaturedCollection } from "@/app/actions/setup.action"
 import { Product, Category } from "@prisma/client"
+import { getCategories } from "@/app/actions/categories.action"
 
 // Define the product type with related entities
 type ProductWithRelations = Product & {
@@ -23,12 +24,27 @@ type CollectionWithProducts = {
   products: ProductWithRelations[];
 };
 
+// Use a custom type for Category with subcategories
+type CategoryWithRelations = {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  image?: string | null;
+  parentId: string | null;
+  subcategories?: CategoryWithRelations[];
+  _count?: {
+    products: number;
+  };
+};
+
 export default function Home() {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true, amount: 0.2 })
   const [featuredProducts, setFeaturedProducts] = useState<ProductWithRelations[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [categories, setCategories] = useState<CategoryWithRelations[]>([])
 
   const scrollRef = useRef(null)
   const { scrollYProgress } = useScroll({
@@ -144,7 +160,25 @@ export default function Home() {
       }
     }
 
-    fetchFeaturedProducts()
+    // Fetch categories for debug section
+    const fetchCategories = async () => {
+      try {
+        const result = await getCategories();
+        if (result.success && result.data) {
+          // Only keep parent categories with subcategories
+          const parentCategories = result.data.filter((cat: CategoryWithRelations) => 
+            !cat.parentId || cat.parentId === ""
+          );
+          
+          setCategories(parentCategories);
+        }
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+      }
+    };
+
+    fetchFeaturedProducts();
+    fetchCategories();
   }, [])
 
   // Display products based on what's available
@@ -501,6 +535,35 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Add debug section for categories - can be removed after verification */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mt-12 container mx-auto">
+          <h2 className="text-2xl font-bold mb-4">Categories Debug</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {categories.length > 0 ? categories.map((category) => (
+              <div key={category.id} className="border p-4 rounded">
+                <h3 className="font-bold">{category.name}</h3>
+                <p>Slug: {category.slug}</p>
+                <p>Products: {category._count?.products || 0}</p>
+                {category.subcategories && category.subcategories.length > 0 && (
+                  <div className="mt-2">
+                    <p className="font-semibold">Subcategories:</p>
+                    <ul className="list-disc pl-5">
+                      {category.subcategories.map((sub: CategoryWithRelations) => (
+                        <li key={sub.id}>{sub.name}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )) : (
+              <p>No categories found</p>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

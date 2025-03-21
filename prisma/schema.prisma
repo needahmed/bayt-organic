@@ -111,13 +111,20 @@ enum ProductStatus {
 }
 
 model Category {
-  id        String    @id @default(auto()) @map("_id") @db.ObjectId
-  name      String    @unique
-  slug      String    @unique
-  image     String?
-  products  Product[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id            String     @id @default(auto()) @map("_id") @db.ObjectId
+  name          String     @unique
+  slug          String     @unique
+  description   String?
+  image         String?
+  products      Product[]
+  
+  // Subcategories support
+  parentId      String?    @db.ObjectId
+  parent        Category?  @relation("SubCategories", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subcategories Category[] @relation("SubCategories")
+  
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 }
 
 model Collection {

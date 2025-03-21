@@ -20,6 +20,7 @@ import {
   X,
   Star,
   Truck,
+  FolderTree,
 } from "lucide-react"
 import { handleLogout } from "@/app/actions/user.actions"
 import { useToast } from "@/components/ui/use-toast"
@@ -34,6 +35,11 @@ const menuItems = [
     title: "Products",
     href: "/admin/products",
     icon: <Package className="h-5 w-5" />,
+  },
+  {
+    title: "Categories",
+    href: "/admin/categories",
+    icon: <FolderTree className="h-5 w-5" />,
   },
   {
     title: "Collections",

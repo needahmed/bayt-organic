@@ -18,12 +18,26 @@ import { ShoppingBag, Menu, X, Search, User } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { useCart } from "@/app/context/CartContext"
+import { getCategories } from "@/app/actions/categories.action"
+
+// Define category type for TypeScript
+type NavCategory = {
+  id: string;
+  name: string;
+  slug: string;
+  parentId: string | null;
+  hasParent?: boolean;
+  subcategoriesCount?: number;
+  subcategories?: NavCategory[];
+};
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
   const { itemCount } = useCart()
+  const [categories, setCategories] = useState<NavCategory[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -37,6 +51,65 @@ export default function Header() {
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
+
+  // Enhanced console logging to debug categories fetching
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Detailed logging for troubleshooting
+        console.log('🚀 Starting to fetch categories for navigation...');
+        
+        // Use a more reliable approach - fetch via API
+        const response = await fetch('/api/test-categories-fetch');
+        const result = await response.json();
+        
+        console.log('📊 Categories API response:', {
+          success: result.success,
+          count: result.categories?.length || 0
+        });
+        
+        if (result.success && result.categories) {
+          // Get all categories first
+          const fetchedCategories = result.categories as NavCategory[];
+          
+          // Get parent categories
+          const parentCategories = fetchedCategories.filter((cat: NavCategory) => 
+            !cat.parentId || cat.parentId === ""
+          );
+          
+          console.log(`🔍 Found ${parentCategories.length} parent categories`);
+          
+          // Add subcategories to each parent
+          const categoriesWithSubs = parentCategories.map((parent: NavCategory) => {
+            const subs = fetchedCategories.filter((cat: NavCategory) => 
+              cat.parentId === parent.id
+            );
+            
+            console.log(`📁 Category ${parent.name} has ${subs.length} subcategories`);
+            
+            return {
+              ...parent,
+              subcategories: subs
+            };
+          });
+          
+          // Set categories state
+          setCategories(categoriesWithSubs);
+          console.log('✅ Navigation menu categories set:', categoriesWithSubs.length);
+        } else {
+          console.error('❌ Failed to fetch categories:', result.error);
+        }
+      } catch (error) {
+        console.error("❌ Error fetching navigation categories:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchCategories();
+  }, []);
 
   const bodyProducts = [
     { title: "Body Deodorant", href: "/products/body-deodorant" },
@@ -66,54 +139,109 @@ export default function Header() {
         <div className="hidden md:flex items-center space-x-8">
           <NavigationMenu>
             <NavigationMenuList>
-              <NavigationMenuItem>
-                <Link href="/products/soaps" legacyBehavior passHref>
-                  <NavigationMenuLink
-                    className={cn(navigationMenuTriggerStyle(), "text-green-700 hover:text-green-800 font-medium")}
-                  >
-                    Soaps
-                  </NavigationMenuLink>
-                </Link>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <Link href="/products/shampoos" legacyBehavior passHref>
-                  <NavigationMenuLink
-                    className={cn(navigationMenuTriggerStyle(), "text-green-700 hover:text-green-800 font-medium")}
-                  >
-                    Shampoos
-                  </NavigationMenuLink>
-                </Link>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <NavigationMenuTrigger className="text-green-700 hover:text-green-800 font-medium">
-                  Body Care
-                </NavigationMenuTrigger>
-                <NavigationMenuContent>
-                  <ul className="grid w-[200px] gap-3 p-4">
-                    {bodyProducts.map((product) => (
-                      <li key={product.title}>
-                        <NavigationMenuLink asChild>
-                          <Link
-                            href={product.href}
-                            className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-green-50 hover:text-green-800"
-                          >
-                            <div className="text-sm font-medium">{product.title}</div>
-                          </Link>
+              {categories.length > 0 ? (
+                // Display dynamically fetched categories
+                categories.map((category) => (
+                  <NavigationMenuItem key={category.id}>
+                    {category.subcategories && category.subcategories.length > 0 ? (
+                      <>
+                        <NavigationMenuTrigger className="text-green-700 hover:text-green-800 font-medium">
+                          {category.name}
+                        </NavigationMenuTrigger>
+                        <NavigationMenuContent>
+                          <ul className="grid w-[200px] gap-3 p-4">
+                            {/* Link to the parent category itself */}
+                            <li>
+                              <NavigationMenuLink asChild>
+                                <Link
+                                  href={`/products/${category.slug}`}
+                                  className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-green-50 hover:text-green-800 font-medium"
+                                >
+                                  <div className="text-sm">All {category.name}</div>
+                                </Link>
+                              </NavigationMenuLink>
+                            </li>
+                            
+                            {/* Links to subcategories */}
+                            {category.subcategories.map((subcat: any) => (
+                              <li key={subcat.id}>
+                                <NavigationMenuLink asChild>
+                                  <Link
+                                    href={`/products/${subcat.slug}`}
+                                    className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-green-50 hover:text-green-800"
+                                  >
+                                    <div className="text-sm font-medium">{subcat.name}</div>
+                                  </Link>
+                                </NavigationMenuLink>
+                              </li>
+                            ))}
+                          </ul>
+                        </NavigationMenuContent>
+                      </>
+                    ) : (
+                      <Link href={`/products/${category.slug}`} legacyBehavior passHref>
+                        <NavigationMenuLink
+                          className={cn(navigationMenuTriggerStyle(), "text-green-700 hover:text-green-800 font-medium")}
+                        >
+                          {category.name}
                         </NavigationMenuLink>
-                      </li>
-                    ))}
-                  </ul>
-                </NavigationMenuContent>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <Link href="/products/accessories" legacyBehavior passHref>
-                  <NavigationMenuLink
-                    className={cn(navigationMenuTriggerStyle(), "text-green-700 hover:text-green-800 font-medium")}
-                  >
-                    Accessories
-                  </NavigationMenuLink>
-                </Link>
-              </NavigationMenuItem>
+                      </Link>
+                    )}
+                  </NavigationMenuItem>
+                ))
+              ) : (
+                // Fallback to static menu items if categories aren't loaded yet
+                <>
+                  <NavigationMenuItem>
+                    <Link href="/products/soaps" legacyBehavior passHref>
+                      <NavigationMenuLink
+                        className={cn(navigationMenuTriggerStyle(), "text-green-700 hover:text-green-800 font-medium")}
+                      >
+                        Soaps
+                      </NavigationMenuLink>
+                    </Link>
+                  </NavigationMenuItem>
+                  <NavigationMenuItem>
+                    <Link href="/products/shampoos" legacyBehavior passHref>
+                      <NavigationMenuLink
+                        className={cn(navigationMenuTriggerStyle(), "text-green-700 hover:text-green-800 font-medium")}
+                      >
+                        Shampoos
+                      </NavigationMenuLink>
+                    </Link>
+                  </NavigationMenuItem>
+                  <NavigationMenuItem>
+                    <NavigationMenuTrigger className="text-green-700 hover:text-green-800 font-medium">
+                      Body Care
+                    </NavigationMenuTrigger>
+                    <NavigationMenuContent>
+                      <ul className="grid w-[200px] gap-3 p-4">
+                        {bodyProducts.map((product) => (
+                          <li key={product.title}>
+                            <NavigationMenuLink asChild>
+                              <Link
+                                href={product.href}
+                                className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-green-50 hover:text-green-800"
+                              >
+                                <div className="text-sm font-medium">{product.title}</div>
+                              </Link>
+                            </NavigationMenuLink>
+                          </li>
+                        ))}
+                      </ul>
+                    </NavigationMenuContent>
+                  </NavigationMenuItem>
+                  <NavigationMenuItem>
+                    <Link href="/products/accessories" legacyBehavior passHref>
+                      <NavigationMenuLink
+                        className={cn(navigationMenuTriggerStyle(), "text-green-700 hover:text-green-800 font-medium")}
+                      >
+                        Accessories
+                      </NavigationMenuLink>
+                    </Link>
+                  </NavigationMenuItem>
+                </>
+              )}
             </NavigationMenuList>
           </NavigationMenu>
         </div>
@@ -164,42 +292,85 @@ export default function Header() {
             className="md:hidden bg-white border-t"
           >
             <div className="container mx-auto px-4 py-4 flex flex-col space-y-4">
-              <Link
-                href="/products/soaps"
-                className="py-2 text-green-700 font-medium"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Soaps
-              </Link>
-              <Link
-                href="/products/shampoos"
-                className="py-2 text-green-700 font-medium"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Shampoos
-              </Link>
-              <div className="py-2">
-                <div className="text-green-700 font-medium mb-2">Body Care</div>
-                <div className="pl-4 flex flex-col space-y-2">
-                  {bodyProducts.map((product) => (
-                    <Link
-                      key={product.title}
-                      href={product.href}
-                      className="py-1 text-green-600"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      {product.title}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-              <Link
-                href="/products/accessories"
-                className="py-2 text-green-700 font-medium"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Accessories
-              </Link>
+              {categories.length > 0 ? (
+                // Display dynamic categories in mobile menu
+                categories.map((category) => (
+                  <div key={category.id}>
+                    {category.subcategories && category.subcategories.length > 0 ? (
+                      <div className="py-2">
+                        <Link
+                          href={`/products/${category.slug}`}
+                          className="text-green-700 font-medium mb-2 block"
+                          onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                          {category.name}
+                        </Link>
+                        <div className="pl-4 flex flex-col space-y-2">
+                          {category.subcategories.map((subcat: any) => (
+                            <Link
+                              key={subcat.id}
+                              href={`/products/${subcat.slug}`}
+                              className="py-1 text-green-600"
+                              onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                              {subcat.name}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <Link
+                        href={`/products/${category.slug}`}
+                        className="py-2 text-green-700 font-medium block"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        {category.name}
+                      </Link>
+                    )}
+                  </div>
+                ))
+              ) : (
+                // Fallback static menu
+                <>
+                  <Link
+                    href="/products/soaps"
+                    className="py-2 text-green-700 font-medium"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Soaps
+                  </Link>
+                  <Link
+                    href="/products/shampoos"
+                    className="py-2 text-green-700 font-medium"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Shampoos
+                  </Link>
+                  <div className="py-2">
+                    <div className="text-green-700 font-medium mb-2">Body Care</div>
+                    <div className="pl-4 flex flex-col space-y-2">
+                      {bodyProducts.map((product) => (
+                        <Link
+                          key={product.title}
+                          href={product.href}
+                          className="py-1 text-green-600"
+                          onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                          {product.title}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                  <Link
+                    href="/products/accessories"
+                    className="py-2 text-green-700 font-medium"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Accessories
+                  </Link>
+                </>
+              )}
+              
               <div className="flex items-center space-x-4 pt-2">
                 <Button variant="ghost" size="icon" className="text-green-700">
                   <Search className="h-5 w-5" />
