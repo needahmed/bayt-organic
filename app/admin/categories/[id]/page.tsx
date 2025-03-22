@@ -15,8 +15,13 @@ import {
 import { ChevronLeft, Edit, Package, FolderTree, Trash } from "lucide-react"
 import { getCategoryById, deleteCategory } from "@/app/actions/categories.action"
 import { toast } from "sonner"
+import { use } from "react"
 
-export default function CategoryPage({ params }: { params: { id: string } }) {
+export default function CategoryPage({ params }: { params: any }) {
+  // Unwrap params using React.use()
+  const unwrappedParams = use(params) as { id: string }
+  const categoryId = unwrappedParams.id
+  
   const router = useRouter()
   const [category, setCategory] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -25,7 +30,7 @@ export default function CategoryPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     async function fetchCategory() {
       try {
-        const result = await getCategoryById(params.id)
+        const result = await getCategoryById(categoryId)
         if (result.success && result.data) {
           setCategory(result.data)
         } else {
@@ -42,7 +47,7 @@ export default function CategoryPage({ params }: { params: { id: string } }) {
     }
 
     fetchCategory()
-  }, [params.id, router])
+  }, [categoryId, router])
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this category?")) {
@@ -51,7 +56,7 @@ export default function CategoryPage({ params }: { params: { id: string } }) {
 
     setIsDeleting(true)
     try {
-      const result = await deleteCategory(params.id)
+      const result = await deleteCategory(categoryId)
       if (result.success) {
         toast.success("Category deleted successfully")
         router.push("/admin/categories")
