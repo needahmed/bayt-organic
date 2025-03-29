@@ -468,7 +468,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Instagram Feed */}
+      {/* Ingredient Spotlight */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <motion.div
@@ -478,32 +478,144 @@ export default function Home() {
             viewport={{ once: true, amount: 0.2 }}
             className="text-center mb-12"
           >
-            <h2 className="font-playfair text-3xl md:text-4xl font-bold text-green-800 mb-4">Follow Us on Instagram</h2>
-            <p className="text-green-700 max-w-2xl mx-auto">@baytorganic</p>
+            <h2 className="font-playfair text-3xl md:text-4xl font-bold text-green-800 mb-4">Ingredient Spotlight</h2>
+            <p className="text-green-700 max-w-2xl mx-auto">
+              Discover the powerful natural ingredients that make our products special
+            </p>
           </motion.div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {[...Array(6)].map((_, index) => (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              {
+                name: "Activated Charcoal",
+                description: "A powerful detoxifier that draws impurities from the skin, leaving it cleaner and clearer. Perfect for oily and acne-prone skin types.",
+                image: "/placeholder.svg?height=300&width=300&text=Charcoal",
+                link: "/blog/ingredients/activated-charcoal-skin-detoxification"
+              },
+              {
+                name: "Raw Honey",
+                description: "Nature's humectant that attracts and retains moisture while providing antibacterial benefits. Honey soothes irritation and gives skin a healthy glow.",
+                image: "/placeholder.svg?height=300&width=300&text=Honey",
+                link: "/blog/ingredients/raw-honey-natural-moisturizer"
+              },
+              {
+                name: "Coconut Oil",
+                description: "Rich in fatty acids and antioxidants, coconut oil nourishes hair and skin while providing intense moisture and protection against environmental damage.",
+                image: "/placeholder.svg?height=300&width=300&text=Coconut+Oil",
+                link: "/blog/ingredients/coconut-oil-beauty-multitasker"
+              }
+            ].map((ingredient, index) => (
               <motion.div
-                key={index}
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: index * 0.05 }}
+                key={ingredient.name}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
                 viewport={{ once: true, amount: 0.2 }}
-                whileHover={{ scale: 1.05 }}
-                className="relative aspect-square overflow-hidden rounded-lg"
+                className="bg-green-50 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow"
               >
-                <Image
-                  src={`/placeholder.svg?height=300&width=300&text=Instagram+${index + 1}`}
-                  alt={`Instagram post ${index + 1}`}
-                  fill
-                  className="object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 hover:opacity-100 transition-opacity flex items-end justify-center p-4">
-                  <span className="text-white text-sm">View Post</span>
-                </div>
+                <Link href={ingredient.link}>
+                  <div className="relative h-48">
+                    <Image
+                      src={ingredient.image}
+                      alt={ingredient.name}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                  <div className="p-6">
+                    <h3 className="font-playfair text-xl font-bold text-green-800 mb-2">{ingredient.name}</h3>
+                    <p className="text-green-700">{ingredient.description}</p>
+                  </div>
+                </Link>
               </motion.div>
             ))}
+          </div>
+          
+          <div className="text-center mt-10">
+            <Button asChild variant="outline" className="border-green-700 text-green-700 hover:bg-green-50">
+              <Link href="/blog">Explore More Ingredients</Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* DIY Tips */}
+      <section className="py-16 bg-green-50">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true, amount: 0.2 }}
+            className="text-center mb-12"
+          >
+            <h2 className="font-playfair text-3xl md:text-4xl font-bold text-green-800 mb-4">Natural Beauty Tips</h2>
+            <p className="text-green-700 max-w-2xl mx-auto">
+              Simple ways to enhance your natural beauty routine
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[
+              {
+                title: "Exfoliation Essentials",
+                description: "Regular gentle exfoliation removes dead skin cells and reveals brighter skin. Look for products with natural exfoliants like oats or sugar.",
+                icon: "✨"
+              },
+              {
+                title: "Hydration is Key",
+                description: "Using natural oils after showering while skin is still damp helps lock in moisture. Oil-based products create a protective barrier on your skin.",
+                icon: "💧"
+              },
+              {
+                title: "The Power of Face Steaming",
+                description: "Weekly face steaming with a towel and warm water opens pores and prepares skin to better absorb natural treatments.",
+                icon: "🌱"
+              }
+            ].map((tip, index) => (
+              <motion.div
+                key={tip.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                viewport={{ once: true, amount: 0.2 }}
+                className="bg-white p-6 rounded-lg shadow-md"
+              >
+                <div className="text-4xl mb-4">{tip.icon}</div>
+                <h3 className="font-playfair text-xl font-bold text-green-800 mb-2">{tip.title}</h3>
+                <p className="text-green-700 mb-4">{tip.description}</p>
+                <motion.div
+                  whileHover={{ x: 5 }}
+                  className="text-pink-500 font-medium flex items-center"
+                >
+                  <Link 
+                    href={
+                      tip.title === "Exfoliation Essentials" 
+                        ? "/blog/tips/gentle-exfoliation-guide" 
+                        : tip.title === "Hydration is Key" 
+                          ? "/blog/tips/lock-moisture-natural-oils"
+                          : "/blog/tips/face-steaming-benefits"
+                    } 
+                    className="flex items-center"
+                  >
+                    Read more tips
+                    <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
+                </motion.div>
+              </motion.div>
+            ))}
+          </div>
+          
+          <div className="max-w-2xl mx-auto mt-12 bg-pink-100 rounded-lg p-6 text-center">
+            <h3 className="font-playfair text-2xl font-bold text-green-800 mb-3">Visit Our Blog</h3>
+            <p className="text-green-700 mb-4">
+              Discover more natural beauty tips, ingredient insights, and sustainable living ideas on our blog.
+            </p>
+            <Button asChild className="bg-green-700 hover:bg-green-800 text-white">
+              <Link href="/blog">Explore the Blog</Link>
+            </Button>
           </div>
         </div>
       </section>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-// import React from "react" // Uncomment when migrating to React.use()
+import React from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -20,25 +20,23 @@ import { getOrderById, updateOrderStatus, updatePaymentStatus } from "@/app/acti
 import { toast } from "sonner"
 import Link from "next/link"
 import Image from "next/image"
-
-// TODO: In the future, we'll need to update the code to use React.use() like this:
-// export default function OrderDetailsPage({ params }: { params: { id: string } }) {
-//   const id = React.use(params).id
-//   ...
-// }
+import { useParamId } from "@/app/utils/params"
 
 export default function OrderDetailsPage({ params }: { params: any }) {
-  // For now, access params.id directly as it's still supported for migration
-  // In a future version of Next.js, we'll need to use React.use() to unwrap the params
+  // Safely extract ID from params using the utility function
+  const id = useParamId(params);
+  
   const [order, setOrder] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isUpdating, setIsUpdating] = useState(false)
 
   useEffect(() => {
+    if (!id) return;
+    
     const loadOrder = async () => {
       try {
         setIsLoading(true)
-        const result = await getOrderById(params.id)
+        const result = await getOrderById(id)
         
         if (result.success && result.data) {
           setOrder(result.data)
@@ -54,12 +52,14 @@ export default function OrderDetailsPage({ params }: { params: any }) {
     }
     
     loadOrder()
-  }, [params.id])
+  }, [id])
 
   const handleUpdateOrderStatus = async (status: string) => {
+    if (!id) return;
+    
     try {
       setIsUpdating(true)
-      const result = await updateOrderStatus(params.id, status as any)
+      const result = await updateOrderStatus(id, status as any)
       
       if (result.success) {
         toast.success(`Order status updated to ${status}`)
@@ -76,9 +76,11 @@ export default function OrderDetailsPage({ params }: { params: any }) {
   }
 
   const handleUpdatePaymentStatus = async (paymentStatus: string) => {
+    if (!id) return;
+    
     try {
       setIsUpdating(true)
-      const result = await updatePaymentStatus(params.id, paymentStatus as any)
+      const result = await updatePaymentStatus(id, paymentStatus as any)
       
       if (result.success) {
         toast.success(`Payment status updated to ${paymentStatus}`)
@@ -367,7 +369,7 @@ export default function OrderDetailsPage({ params }: { params: any }) {
             <CardContent>
               <div className="space-y-1">
                 <p>{order.shippingAddress?.name}</p>
-                <p>{order.shippingAddress?.street}</p>
+                <p>{order.shippingAddress?.address}</p>
                 <p>
                   {order.shippingAddress?.city}, {order.shippingAddress?.state} {order.shippingAddress?.postalCode}
                 </p>

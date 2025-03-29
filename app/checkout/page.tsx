@@ -260,7 +260,14 @@ export default function CheckoutPage() {
     e.preventDefault()
     
     if (activeStep === "shipping") {
-      // Validate shipping information
+      // Check if a user is logged in and an address is selected
+      if (user && selectedAddressId) {
+        // If a saved address is selected, we can proceed without validating the form fields
+        setActiveStep("payment");
+        return;
+      }
+      
+      // For guest checkout or when no saved address is selected, validate all shipping information
       if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || 
           !formData.address || !formData.city || !formData.state || 
           !formData.postalCode || !formData.country) {
@@ -304,12 +311,16 @@ export default function CheckoutPage() {
       setIsCreatingOrder(true);
       toast.info("Processing your order...");
       
-      // Validate required fields
-      if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || 
-          !formData.address || !formData.city || !formData.state || 
-          !formData.postalCode || !formData.country) {
-        toast.error("Please fill in all required shipping information");
-        return;
+      // Only validate the form fields if no saved address is selected
+      if (!user || !selectedAddressId) {
+        // Validate required fields for new address
+        if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || 
+            !formData.address || !formData.city || !formData.state || 
+            !formData.postalCode || !formData.country) {
+          toast.error("Please fill in all required shipping information");
+          setIsCreatingOrder(false);
+          return;
+        }
       }
       
       // Debug log cart items
@@ -347,6 +358,7 @@ export default function CheckoutPage() {
       
       if (!shippingAddress) {
         toast.error("Invalid shipping address information");
+        setIsCreatingOrder(false);
         return;
       }
       
@@ -507,16 +519,21 @@ export default function CheckoutPage() {
                                   key={address.id}
                                   className={`border rounded-lg p-4 cursor-pointer transition-colors ${
                                     selectedAddressId === address.id
-                                      ? "border-green-500 bg-green-50"
+                                      ? "border-green-500 bg-green-50 shadow-sm"
                                       : "border-gray-200 hover:border-green-300"
                                   }`}
                                   onClick={() => handleAddressSelect(address.id)}
                                 >
                                   <div className="flex justify-between items-start mb-2">
                                     <h4 className="font-medium text-green-800">{address.name}</h4>
-                                    {address.isDefault && (
-                                      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Default</span>
-                                    )}
+                                    <div className="flex flex-col items-end gap-1">
+                                      {address.isDefault && (
+                                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Default</span>
+                                      )}
+                                      {selectedAddressId === address.id && (
+                                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Selected</span>
+                                      )}
+                                    </div>
                                   </div>
                                   <p className="text-sm text-green-700">{address.phone}</p>
                                   <p className="text-sm text-green-700">{address.address}</p>
@@ -527,6 +544,24 @@ export default function CheckoutPage() {
                                 </div>
                               ))}
                             </div>
+                            
+                            {selectedAddressId && (
+                              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 my-4">
+                                <div className="flex justify-between items-center">
+                                  <p className="text-blue-800 font-medium">
+                                    Using selected address for shipping
+                                  </p>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => setSelectedAddressId("")}
+                                    className="text-blue-600 border-blue-200 hover:bg-blue-100"
+                                  >
+                                    Change
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
                             
                             <div className="flex items-center space-x-2">
                               <div className="h-px flex-1 bg-gray-200"></div>
@@ -548,7 +583,22 @@ export default function CheckoutPage() {
 
                         {/* Shipping information form */}
                         <form onSubmit={handleSubmit} id="shipping-form">
-                          <h3 className="text-lg font-medium text-green-800 mb-4">{user ? "New Shipping Address" : "Shipping Information"}</h3>
+                          <h3 className="text-lg font-medium text-green-800 mb-4">
+                            {user && addresses.length > 0 
+                              ? selectedAddressId 
+                                ? "New Shipping Address (Optional)" 
+                                : "New Shipping Address"
+                              : "Shipping Information"}
+                          </h3>
+                          
+                          {user && selectedAddressId && (
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                              <p className="text-sm text-green-700">
+                                You've selected a saved address for delivery. Fields below are optional unless you want to create a new address.
+                              </p>
+                            </div>
+                          )}
+                          
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <Label htmlFor="firstName">First Name</Label>
@@ -557,7 +607,7 @@ export default function CheckoutPage() {
                                 name="firstName"
                                 value={formData.firstName}
                                 onChange={handleInputChange}
-                                required
+                                required={!user || !selectedAddressId}
                               />
                             </div>
                             <div className="space-y-2">
@@ -567,7 +617,7 @@ export default function CheckoutPage() {
                                 name="lastName"
                                 value={formData.lastName}
                                 onChange={handleInputChange}
-                                required
+                                required={!user || !selectedAddressId}
                               />
                             </div>
                           </div>
@@ -581,7 +631,7 @@ export default function CheckoutPage() {
                                 type="email"
                                 value={formData.email}
                                 onChange={handleInputChange}
-                                required
+                                required={!user || !selectedAddressId}
                               />
                             </div>
                             <div className="space-y-2">
@@ -591,7 +641,7 @@ export default function CheckoutPage() {
                                 name="phone"
                                 value={formData.phone}
                                 onChange={handleInputChange}
-                                required
+                                required={!user || !selectedAddressId}
                               />
                             </div>
                           </div>
@@ -603,14 +653,20 @@ export default function CheckoutPage() {
                               name="address"
                               value={formData.address}
                               onChange={handleInputChange}
-                              required
+                              required={!user || !selectedAddressId}
                             />
                           </div>
 
                           <div className="grid grid-cols-2 gap-4 mb-4">
                             <div className="space-y-2">
                               <Label htmlFor="city">City</Label>
-                              <Input id="city" name="city" value={formData.city} onChange={handleInputChange} required />
+                              <Input 
+                                id="city" 
+                                name="city" 
+                                value={formData.city} 
+                                onChange={handleInputChange} 
+                                required={!user || !selectedAddressId} 
+                              />
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="state">State/Province</Label>
@@ -619,7 +675,7 @@ export default function CheckoutPage() {
                                 name="state"
                                 value={formData.state}
                                 onChange={handleInputChange}
-                                required
+                                required={!user || !selectedAddressId}
                               />
                             </div>
                           </div>
@@ -632,7 +688,7 @@ export default function CheckoutPage() {
                                 name="postalCode"
                                 value={formData.postalCode}
                                 onChange={handleInputChange}
-                                required
+                                required={!user || !selectedAddressId}
                               />
                             </div>
                             <div className="space-y-2">

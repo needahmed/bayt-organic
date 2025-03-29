@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import React from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -12,13 +13,18 @@ import Link from "next/link"
 import Image from "next/image"
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
+import { useParamId } from "@/app/utils/params"
 
 export default function UserOrderDetailsPage({ params }: { params: any }) {
+  // Safely extract ID from params using the utility function
+  const id = useParamId(params);
   const [order, setOrder] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isAuthorized, setIsAuthorized] = useState(true)
 
   useEffect(() => {
+    if (!id) return;
+    
     const loadOrder = async () => {
       try {
         setIsLoading(true)
@@ -29,7 +35,7 @@ export default function UserOrderDetailsPage({ params }: { params: any }) {
           return
         }
         
-        const result = await getOrderById(params.id)
+        const result = await getOrderById(id)
         
         if (result.success && result.data) {
           // Check if the order belongs to the current user
@@ -51,7 +57,7 @@ export default function UserOrderDetailsPage({ params }: { params: any }) {
     }
     
     loadOrder()
-  }, [params.id])
+  }, [id])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -212,7 +218,7 @@ export default function UserOrderDetailsPage({ params }: { params: any }) {
             <CardContent>
               <div className="space-y-1">
                 <p>{order.shippingAddress?.name}</p>
-                <p>{order.shippingAddress?.street}</p>
+                <p>{order.shippingAddress?.address}</p>
                 <p>
                   {order.shippingAddress?.city}, {order.shippingAddress?.state} {order.shippingAddress?.postalCode}
                 </p>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, use } from "react"
+import React, { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -17,6 +17,7 @@ import { getCategories } from "@/app/actions/categories.action"
 import { toast } from "sonner"
 import { ImageUpload } from "@/components/ui/image-upload"
 import { ManageProductCollections } from "@/components/admin/manage-product-collections"
+import { useParamId } from "@/app/utils/params"
 
 // Define types for product data
 interface ProductData {
@@ -51,10 +52,9 @@ interface Collection {
 }
 
 export default function EditProductPage({ params }: { params: any }) {
-  // Unwrap params using React.use()
-  const unwrappedParams = use(params) as { id: string };
-  const productId = unwrappedParams.id;
-  
+  // Safely extract ID from params using the utility function
+  const id = useParamId(params);
+
   const router = useRouter()
   const [activeTab, setActiveTab] = useState("basic")
   const [isInitialLoading, setIsInitialLoading] = useState(true)
@@ -80,7 +80,7 @@ export default function EditProductPage({ params }: { params: any }) {
       try {
         const [categoriesResult, productResult] = await Promise.all([
           getCategories(),
-          getProductById(productId)
+          getProductById(id)
         ])
         
         if (categoriesResult.success && categoriesResult.data) {
@@ -119,7 +119,7 @@ export default function EditProductPage({ params }: { params: any }) {
     }
     
     fetchProductData()
-  }, [productId, router])
+  }, [id, router])
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -158,7 +158,7 @@ export default function EditProductPage({ params }: { params: any }) {
       })
       
       // Update product
-      const result = await updateProduct(productId, formData as any)
+      const result = await updateProduct(id, formData as any)
       
       if (result.success) {
         toast.success("Product updated successfully")
@@ -396,7 +396,7 @@ export default function EditProductPage({ params }: { params: any }) {
                 <CardDescription>Assign this product to collections</CardDescription>
               </CardHeader>
               <CardContent>
-                <ManageProductCollections productId={productId} />
+                <ManageProductCollections productId={id} />
               </CardContent>
             </Card>
           </TabsContent>

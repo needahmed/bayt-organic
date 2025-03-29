@@ -6,67 +6,41 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { ArrowUpRight, DollarSign, Package, ShoppingCart, Users, ArrowUp, ArrowDown } from "lucide-react"
+import { ArrowUpRight, DollarSign, Package, ShoppingCart, Users, ArrowUp, ArrowDown, Loader2 } from "lucide-react"
+import { getDashboardAnalytics } from "@/app/actions/dashboard.action"
+import { toast } from "sonner"
+import Link from "next/link"
 
-// Sample data for the dashboard
-const recentOrders = [
-  {
-    id: "ORD-001",
-    customer: "Sarah M.",
-    date: "2 hours ago",
-    status: "Processing",
-    amount: 3700,
-    items: 3,
-  },
-  {
-    id: "ORD-002",
-    customer: "Ahmed K.",
-    date: "5 hours ago",
-    status: "Shipped",
-    amount: 2100,
-    items: 2,
-  },
-  {
-    id: "ORD-003",
-    customer: "Layla R.",
-    date: "1 day ago",
-    status: "Delivered",
-    amount: 4500,
-    items: 4,
-  },
-  {
-    id: "ORD-004",
-    customer: "Tariq A.",
-    date: "2 days ago",
-    status: "Delivered",
-    amount: 1800,
-    items: 1,
-  },
-]
-
-// Replace with:
+// Type definition for time range in charts
 type TimeRangeKey = 'daily' | 'weekly' | 'monthly';
-
-const salesData: Record<TimeRangeKey, number[]> = {
-  daily: [1200, 1800, 1400, 2100, 1700, 2300, 2500],
-  weekly: [8500, 9200, 7800, 10500, 11200, 9800, 12500],
-  monthly: [35000, 42000, 38000, 45000, 52000, 48000, 56000],
-}
 
 export default function AdminDashboard() {
   const [timeRange, setTimeRange] = useState<TimeRangeKey>("daily")
   const [error, setError] = useState<Error | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
+  const [dashboardData, setDashboardData] = useState<any>(null)
 
-  // Add error boundary and initialization
+  // Load dashboard data
   useEffect(() => {
-    try {
-      console.log("Admin dashboard component mounted");
-      setIsLoaded(true);
-    } catch (err) {
-      console.error("Error in admin dashboard:", err);
-      setError(err instanceof Error ? err : new Error(String(err)));
+    async function loadDashboardData() {
+      try {
+        console.log("Admin dashboard component mounted");
+        const result = await getDashboardAnalytics();
+        
+        if (result.success && result.data) {
+          setDashboardData(result.data);
+        } else {
+          setError(new Error(result.error || "Failed to load dashboard data"));
+        }
+      } catch (err) {
+        console.error("Error in admin dashboard:", err);
+        setError(err instanceof Error ? err : new Error(String(err)));
+      } finally {
+        setIsLoaded(true);
+      }
     }
+    
+    loadDashboardData();
   }, []);
 
   // If there's an error, show it
@@ -83,11 +57,11 @@ export default function AdminDashboard() {
   }
 
   // Show a loading indicator until we're sure the component is mounted
-  if (!isLoaded) {
+  if (!isLoaded || !dashboardData) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-700 border-t-transparent mx-auto mb-4"></div>
+          <Loader2 className="h-8 w-8 animate-spin text-green-700 mx-auto mb-4" />
           <p>Loading dashboard...</p>
         </div>
       </div>
@@ -105,9 +79,11 @@ export default function AdminDashboard() {
           <Button variant="outline" size="sm">
             Download Report
           </Button>
-          <Button size="sm" className="bg-green-700 hover:bg-green-800 text-white">
-            View Analytics
-          </Button>
+          <Link href="/admin/analytics">
+            <Button size="sm" className="bg-green-700 hover:bg-green-800 text-white">
+              View Analytics
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -119,10 +95,13 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between space-x-4">
                 <div className="flex flex-col space-y-1">
                   <span className="text-sm font-medium text-muted-foreground">Total Revenue</span>
-                  <span className="text-2xl font-bold">Rs. 124,500</span>
-                  <div className="flex items-center text-sm text-green-600">
-                    <ArrowUp className="h-4 w-4 mr-1" />
-                    <span>12% from last month</span>
+                  <span className="text-2xl font-bold">Rs. {dashboardData.totalRevenue.toLocaleString()}</span>
+                  <div className={`flex items-center text-sm ${dashboardData.revenueChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {dashboardData.revenueChange >= 0 ? 
+                      <ArrowUp className="h-4 w-4 mr-1" /> : 
+                      <ArrowDown className="h-4 w-4 mr-1" />
+                    }
+                    <span>{Math.abs(dashboardData.revenueChange)}% from last month</span>
                   </div>
                 </div>
                 <div className="rounded-full bg-green-100 p-3 text-green-700">
@@ -139,10 +118,13 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between space-x-4">
                 <div className="flex flex-col space-y-1">
                   <span className="text-sm font-medium text-muted-foreground">Total Orders</span>
-                  <span className="text-2xl font-bold">78</span>
-                  <div className="flex items-center text-sm text-green-600">
-                    <ArrowUp className="h-4 w-4 mr-1" />
-                    <span>8% from last month</span>
+                  <span className="text-2xl font-bold">{dashboardData.totalOrders}</span>
+                  <div className={`flex items-center text-sm ${dashboardData.ordersChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {dashboardData.ordersChange >= 0 ? 
+                      <ArrowUp className="h-4 w-4 mr-1" /> : 
+                      <ArrowDown className="h-4 w-4 mr-1" />
+                    }
+                    <span>{Math.abs(dashboardData.ordersChange)}% from last month</span>
                   </div>
                 </div>
                 <div className="rounded-full bg-pink-100 p-3 text-pink-700">
@@ -159,10 +141,10 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between space-x-4">
                 <div className="flex flex-col space-y-1">
                   <span className="text-sm font-medium text-muted-foreground">Total Products</span>
-                  <span className="text-2xl font-bold">32</span>
+                  <span className="text-2xl font-bold">{dashboardData.totalProducts}</span>
                   <div className="flex items-center text-sm text-green-600">
                     <ArrowUp className="h-4 w-4 mr-1" />
-                    <span>4 new this month</span>
+                    <span>{dashboardData.productsChange}% new this month</span>
                   </div>
                 </div>
                 <div className="rounded-full bg-blue-100 p-3 text-blue-700">
@@ -179,10 +161,13 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between space-x-4">
                 <div className="flex flex-col space-y-1">
                   <span className="text-sm font-medium text-muted-foreground">Total Customers</span>
-                  <span className="text-2xl font-bold">156</span>
-                  <div className="flex items-center text-sm text-red-600">
-                    <ArrowDown className="h-4 w-4 mr-1" />
-                    <span>3% from last month</span>
+                  <span className="text-2xl font-bold">{dashboardData.totalCustomers}</span>
+                  <div className={`flex items-center text-sm ${dashboardData.customersChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {dashboardData.customersChange >= 0 ? 
+                      <ArrowUp className="h-4 w-4 mr-1" /> : 
+                      <ArrowDown className="h-4 w-4 mr-1" />
+                    }
+                    <span>{Math.abs(dashboardData.customersChange)}% from last month</span>
                   </div>
                 </div>
                 <div className="rounded-full bg-orange-100 p-3 text-orange-700">
@@ -211,14 +196,14 @@ export default function AdminDashboard() {
           <div className="h-[300px] w-full">
             {/* This would be a chart component in a real app */}
             <div className="flex h-full items-end gap-2 pb-6">
-              {salesData[timeRange].map((value, index) => (
+              {dashboardData.salesData[timeRange].map((value: number, index: number) => (
                 <div
                   key={index}
                   className="relative flex-1 rounded-t-md bg-green-600 transition-all duration-300"
-                  style={{ height: `${(value / Math.max(...salesData[timeRange])) * 80}%` }}
+                  style={{ height: `${(value / Math.max(...dashboardData.salesData[timeRange])) * 80}%` }}
                 >
                   <div className="absolute -top-7 w-full text-center text-xs font-medium">
-                    {timeRange === "daily" ? `Rs. ${value}` : `Rs. ${value / 1000}k`}
+                    {timeRange === "daily" ? `Rs. ${value.toLocaleString()}` : `Rs. ${(value / 1000).toFixed(1)}k`}
                   </div>
                 </div>
               ))}
@@ -270,7 +255,7 @@ export default function AdminDashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {recentOrders.map((order) => (
+            {dashboardData.recentOrders.map((order: any) => (
               <div key={order.id} className="flex items-center justify-between border-b pb-4">
                 <div className="flex items-center space-x-4">
                   <Avatar className="h-9 w-9">
@@ -289,26 +274,32 @@ export default function AdminDashboard() {
                   </div>
                   <Badge
                     className={
-                      order.status === "Processing"
+                      order.status === "PROCESSING"
                         ? "bg-blue-100 text-blue-800 hover:bg-blue-100"
-                        : order.status === "Shipped"
+                        : order.status === "SHIPPED"
                           ? "bg-amber-100 text-amber-800 hover:bg-amber-100"
-                          : "bg-green-100 text-green-800 hover:bg-green-100"
+                          : order.status === "DELIVERED"
+                            ? "bg-green-100 text-green-800 hover:bg-green-100"
+                            : "bg-gray-100 text-gray-800 hover:bg-gray-100"
                     }
                   >
                     {order.status}
                   </Badge>
-                  <Button variant="ghost" size="icon">
-                    <ArrowUpRight className="h-4 w-4" />
-                  </Button>
+                  <Link href={`/admin/orders/${order.id}`}>
+                    <Button variant="ghost" size="icon">
+                      <ArrowUpRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
                 </div>
               </div>
             ))}
           </div>
           <div className="mt-4 text-center">
-            <Button variant="outline" className="w-full">
-              View All Orders
-            </Button>
+            <Link href="/admin/orders">
+              <Button variant="outline" className="w-full">
+                View All Orders
+              </Button>
+            </Link>
           </div>
         </CardContent>
       </Card>

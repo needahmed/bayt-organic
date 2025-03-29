@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
@@ -15,13 +15,12 @@ import {
 import { ChevronLeft, Edit, Package, FolderTree, Trash } from "lucide-react"
 import { getCategoryById, deleteCategory } from "@/app/actions/categories.action"
 import { toast } from "sonner"
-import { use } from "react"
+import { useParamId } from "@/app/utils/params"
 
 export default function CategoryPage({ params }: { params: any }) {
-  // Unwrap params using React.use()
-  const unwrappedParams = use(params) as { id: string }
-  const categoryId = unwrappedParams.id
-  
+  // Safely extract ID from params using the utility function
+  const id = useParamId(params);
+
   const router = useRouter()
   const [category, setCategory] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -30,7 +29,7 @@ export default function CategoryPage({ params }: { params: any }) {
   useEffect(() => {
     async function fetchCategory() {
       try {
-        const result = await getCategoryById(categoryId)
+        const result = await getCategoryById(id)
         if (result.success && result.data) {
           setCategory(result.data)
         } else {
@@ -47,7 +46,7 @@ export default function CategoryPage({ params }: { params: any }) {
     }
 
     fetchCategory()
-  }, [categoryId, router])
+  }, [id, router])
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this category?")) {
@@ -56,7 +55,7 @@ export default function CategoryPage({ params }: { params: any }) {
 
     setIsDeleting(true)
     try {
-      const result = await deleteCategory(categoryId)
+      const result = await deleteCategory(id)
       if (result.success) {
         toast.success("Category deleted successfully")
         router.push("/admin/categories")
