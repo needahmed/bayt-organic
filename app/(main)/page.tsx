@@ -648,34 +648,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Add debug section for categories - can be removed after verification */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="mt-12 container mx-auto">
-          <h2 className="text-2xl font-bold mb-4">Categories Debug</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {categories.length > 0 ? categories.map((category) => (
-              <div key={category.id} className="border p-4 rounded">
-                <h3 className="font-bold">{category.name}</h3>
-                <p>Slug: {category.slug}</p>
-                <p>Products: {category._count?.products || 0}</p>
-                {category.subcategories && category.subcategories.length > 0 && (
-                  <div className="mt-2">
-                    <p className="font-semibold">Subcategories:</p>
-                    <ul className="list-disc pl-5">
-                      {category.subcategories.map((sub: CategoryWithRelations) => (
-                        <li key={sub.id}>{sub.name}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            )) : (
-              <p>No categories found</p>
-            )}
-          </div>
-        </div>
-      )}
-
     </div>
   )
 }

@@ -68,6 +68,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (!passwordMatch) {
             return null;
           }
+          
+          // Check if email is verified (only for credential-based logins)
+          if (!user.emailVerified) {
+            throw new Error("Email not verified. Please check your inbox to verify your email address.");
+          }
 
           // Return the user object (without the password)
           return {
@@ -78,7 +83,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           };
         } catch (error) {
           console.error("Authentication error:", error);
-          return null;
+          throw error; // Forward the error to the client
         }
       }
     }),

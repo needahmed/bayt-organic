@@ -3,6 +3,8 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { OrderStatus, PaymentStatus } from '@prisma/client'
+import { sendOrderConfirmationEmail } from '@/lib/email-utils'
+import { auth } from "@/auth";
 
 // Types for order operations
 export type OrderFormData = {
@@ -352,6 +354,43 @@ export async function createOrder(data: OrderFormData) {
         // Don't fail the order if we can't revalidate paths
       }
       
+      // Send order confirmation email
+      try {
+        // Determine the email address to use
+        // First try to use the email from form data if provided (e.g., guest checkout)
+        // Then, if user is connected, try to get their email
+        // Fallback to checking the shipping address for an email
+        let emailToUse = data.email;
+        
+        if (!emailToUse && data.userId) {
+          const user = await prisma.user.findUnique({
+            where: { id: data.userId },
+            select: { email: true }
+          });
+          if (user?.email) {
+            emailToUse = user.email;
+          }
+        }
+        
+        if (emailToUse && completeOrder.shippingAddress) {
+          console.log("Sending order confirmation email to:", emailToUse);
+          const emailSent = await sendOrderConfirmationEmail(emailToUse, {
+            ...completeOrder,
+            shippingAddress: completeOrder.shippingAddress
+          });
+          console.log("Order confirmation email sent:", emailSent);
+        } else {
+          console.log(
+            emailToUse 
+              ? "No shipping address available for order confirmation" 
+              : "No email address available for order confirmation"
+          );
+        }
+      } catch (emailError) {
+        console.error("Error sending order confirmation email:", emailError);
+        // Don't fail the order if email sending fails
+      }
+      
       console.log("Order creation successful, returning result", new Date().toISOString());
       return { success: true, data: completeOrder };
     } catch (orderError) {
@@ -399,5 +438,24 @@ export async function updatePaymentStatus(id: string, paymentStatus: PaymentStat
   } catch (error) {
     console.error(`Error updating payment status for order ${id}:`, error)
     return { success: false, error: 'Failed to update payment status' }
+  }
+}
+
+// Get orders for the currently authenticated user
+export async function getOrdersForCurrentUser() {
+  try {
+    const session = await auth();
+    
+    if (!session || !session.user || !session.user.id) {
+      return { success: false, error: 'User not authenticated' };
+    }
+    
+    const userId = session.user.id;
+    
+    // Use the existing function to get orders by user ID
+    return await getOrdersByUserId(userId);
+  } catch (error) {
+    console.error('Error getting orders for current user:', error);
+    return { success: false, error: 'Failed to get orders' };
   }
 } 

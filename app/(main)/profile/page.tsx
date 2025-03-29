@@ -11,17 +11,33 @@ import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { motion } from "framer-motion"
-import { User, Package, Heart, CreditCard, LogOut, Edit2, Save } from "lucide-react"
+import { User, Package, Heart, CreditCard, LogOut, Edit2, Save, ShoppingBag, Clock, Truck, CheckCircle, XCircle, ChevronRight, AlertCircle } from "lucide-react"
 import { getUserProfile, updateUserProfile, handleLogout } from "@/app/actions/user.actions"
 import { useToast } from "@/components/ui/use-toast"
+import { Badge } from "@/components/ui/badge"
+import { getOrdersForCurrentUser } from "@/app/actions/orders.action"
+import { useSession } from "next-auth/react"
 
 export default function ProfilePage() {
-  const [activeTab, setActiveTab] = useState("account")
+  const [activeTab, setActiveTab] = useState("profile")
   const [isEditing, setIsEditing] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
   const router = useRouter()
   const { toast } = useToast()
+  const { data: session, status } = useSession()
+  
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push('/auth/login?callbackUrl=/profile')
+    }
+  }, [status, router])
+  
+  // Add orders state
+  const [orders, setOrders] = useState<any[]>([])
+  const [isLoadingOrders, setIsLoadingOrders] = useState(true)
+  const [ordersError, setOrdersError] = useState("")
   
   const [userData, setUserData] = useState({
     id: "",
@@ -90,6 +106,36 @@ export default function ProfilePage() {
     
     fetchUserData()
   }, [router])
+
+  // Add orders fetch effect
+  useEffect(() => {
+    const loadOrders = async () => {
+      try {
+        if (status === "loading") return
+
+        if (status === "unauthenticated") {
+          router.push("/auth/login?callbackUrl=/profile")
+          return
+        }
+
+        setIsLoadingOrders(true)
+        const result = await getOrdersForCurrentUser()
+
+        if (result.success && 'data' in result) {
+          setOrders(result.data || [])
+        } else {
+          setOrdersError(result.error || "Failed to load orders")
+        }
+      } catch (error) {
+        console.error("Error loading orders:", error)
+        setOrdersError("An error occurred while loading your orders")
+      } finally {
+        setIsLoadingOrders(false)
+      }
+    }
+
+    loadOrders()
+  }, [status, router])
 
   const handleInputChange = (e: any) => {
     const { name, value } = e.target
@@ -160,6 +206,49 @@ export default function ProfilePage() {
     }
   }
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    }).format(date)
+  }
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "PENDING":
+        return <Clock className="h-4 w-4 text-amber-500" />
+      case "PROCESSING":
+        return <Package className="h-4 w-4 text-blue-500" />
+      case "SHIPPED":
+        return <Truck className="h-4 w-4 text-purple-500" />
+      case "DELIVERED":
+        return <CheckCircle className="h-4 w-4 text-green-500" />
+      case "CANCELLED":
+        return <XCircle className="h-4 w-4 text-red-500" />
+      default:
+        return <Clock className="h-4 w-4 text-gray-500" />
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "PENDING":
+        return "bg-amber-100 text-amber-800 hover:bg-amber-200"
+      case "PROCESSING":
+        return "bg-blue-100 text-blue-800 hover:bg-blue-200"
+      case "SHIPPED":
+        return "bg-purple-100 text-purple-800 hover:bg-purple-200"
+      case "DELIVERED":
+        return "bg-green-100 text-green-800 hover:bg-green-200"
+      case "CANCELLED":
+        return "bg-red-100 text-red-800 hover:bg-red-200"
+      default:
+        return "bg-gray-100 text-gray-800 hover:bg-gray-200"
+    }
+  }
+
   // Loading state
   if (isLoading && !userData.id) {
     return (
@@ -186,42 +275,6 @@ export default function ProfilePage() {
       </div>
     )
   }
-
-  // Sample order history - in a real app, this would come from the database
-  const orders = [
-    {
-      id: "BO-12345",
-      date: "June 15, 2023",
-      status: "Delivered",
-      total: 3700,
-      items: [
-        {
-          name: "Honey & Oats Body Soap",
-          quantity: 2,
-        },
-        {
-          name: "Coconut Milk Shampoo Bar",
-          quantity: 1,
-        },
-      ],
-    },
-    {
-      id: "BO-12346",
-      date: "May 22, 2023",
-      status: "Delivered",
-      total: 2100,
-      items: [
-        {
-          name: "Anti-Aging Face Serum",
-          quantity: 1,
-        },
-        {
-          name: "Lavender Lip Balm",
-          quantity: 2,
-        },
-      ],
-    },
-  ]
 
   // Sample wishlist - in a real app, this would come from the database
   const wishlist = [
@@ -275,16 +328,15 @@ export default function ProfilePage() {
                 <div className="w-full">
                   <TabsList className="flex flex-col h-auto bg-transparent space-y-1 w-full">
                     <TabsTrigger
-                      value="account"
+                      value="profile"
                       className="justify-start data-[state=active]:bg-green-50 data-[state=active]:text-green-800 w-full"
                     >
                       <User className="h-4 w-4 mr-2" />
-                      Account
+                      Profile
                     </TabsTrigger>
                     <TabsTrigger
                       value="orders"
                       className="justify-start data-[state=active]:bg-green-50 data-[state=active]:text-green-800 w-full"
-                      onClick={() => router.push('/dashboard/orders')}
                     >
                       <Package className="h-4 w-4 mr-2" />
                       Orders
@@ -321,7 +373,7 @@ export default function ProfilePage() {
           </motion.div>
 
           <div className="flex-1">
-            <TabsContent value="account" className="mt-0">
+            <TabsContent value="profile" className="mt-0">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
@@ -469,67 +521,111 @@ export default function ProfilePage() {
             <TabsContent value="orders" className="mt-0">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-green-800">Order History</CardTitle>
-                  <CardDescription>View and track your recent orders</CardDescription>
+                  <CardTitle className="text-green-800">Your Orders</CardTitle>
+                  <CardDescription>View and track all your orders</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {orders.length > 0 ? (
-                    <div className="space-y-6">
-                      {orders.map((order) => (
-                        <div key={order.id} className="border rounded-lg overflow-hidden">
-                          <div className="bg-green-50 p-4 flex flex-col md:flex-row justify-between md:items-center">
-                            <div>
-                              <h3 className="font-medium text-green-800">Order #{order.id}</h3>
-                              <p className="text-sm text-green-600">Placed on {order.date}</p>
-                            </div>
-                            <div className="flex items-center mt-2 md:mt-0">
-                              <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  order.status === "Delivered"
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-blue-100 text-blue-800"
-                                }`}
-                              >
-                                {order.status}
-                              </span>
-                              <Button
-                                asChild
-                                variant="ghost"
-                                size="sm"
-                                className="ml-4 text-green-700 hover:text-green-800 hover:bg-green-50"
-                              >
-                                <Link href={`/profile/orders/${order.id}`}>View Details</Link>
-                              </Button>
-                            </div>
-                          </div>
-                          <div className="p-4">
-                            <div className="space-y-2">
-                              {order.items.map((item, index) => (
-                                <div key={index} className="flex justify-between text-sm">
-                                  <span className="text-green-700">
-                                    {item.name} × {item.quantity}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                            <Separator className="my-3" />
-                            <div className="flex justify-between font-medium">
-                              <span className="text-green-800">Total</span>
-                              <span className="text-green-800">Rs. {order.total.toLocaleString()}</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                  {isLoadingOrders ? (
+                    <div className="flex items-center justify-center h-64">
+                      <div className="text-center">
+                        <div className="animate-spin h-8 w-8 border-4 border-green-700 border-t-transparent rounded-full mx-auto mb-4"></div>
+                        <p className="text-green-700">Loading your orders...</p>
+                      </div>
                     </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <Package className="h-12 w-12 text-green-300 mx-auto mb-4" />
-                      <h3 className="font-medium text-green-800 mb-1">No Orders Yet</h3>
-                      <p className="text-green-600 mb-4">You haven't placed any orders yet.</p>
+                  ) : ordersError ? (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md mb-6">
+                      {ordersError}
+                    </div>
+                  ) : orders.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <ShoppingBag className="h-12 w-12 text-green-300 mb-4" />
+                      <h3 className="text-xl font-medium text-green-800 mb-2">No Orders Yet</h3>
+                      <p className="text-green-600 mb-6 text-center max-w-md">
+                        You haven't placed any orders yet. Start shopping to see your orders here.
+                      </p>
                       <Button asChild className="bg-green-700 hover:bg-green-800 text-white">
-                        <Link href="/">Start Shopping</Link>
+                        <Link href="/products">Shop Now</Link>
                       </Button>
                     </div>
+                  ) : (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: 0.2 }}
+                    >
+                      <div className="space-y-4">
+                        {orders.map((order) => (
+                          <div key={order.id} className="border rounded-lg overflow-hidden transition-all hover:shadow-md">
+                            <Link href={`/profile/orders/${order.id}`}>
+                              <div className="cursor-pointer p-4">
+                                <div className="flex justify-between items-start mb-3">
+                                  <div>
+                                    <h3 className="font-medium text-green-800">
+                                      Order #{order.orderNumber}
+                                    </h3>
+                                    <p className="text-sm text-green-600">Placed on {formatDate(order.createdAt)}</p>
+                                  </div>
+                                  <Badge className={`${getStatusColor(order.status)} flex items-center gap-1`}>
+                                    {getStatusIcon(order.status)}
+                                    {order.status}
+                                  </Badge>
+                                </div>
+                                
+                                <div className="flex flex-col space-y-3">
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                      <p className="text-sm text-green-600 mb-1">Items</p>
+                                      <p className="font-medium text-green-800">{order.items.length} items</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-sm text-green-600 mb-1">Total</p>
+                                      <p className="font-medium text-green-800">Rs. {order.total.toLocaleString()}</p>
+                                    </div>
+                                  </div>
+
+                                  <Separator className="my-2" />
+
+                                  <div className="space-y-3">
+                                    <div className="flex flex-wrap gap-2">
+                                      {order.items.slice(0, 3).map((item: { id: string; name: string; quantity: number; product?: { images?: string[] } }) => (
+                                        <div key={item.id} className="flex items-center space-x-2">
+                                          <div className="relative h-10 w-10 rounded-md overflow-hidden">
+                                            {item.product?.images?.[0] ? (
+                                              <Image
+                                                src={item.product.images[0]}
+                                                alt={item.name}
+                                                fill
+                                                className="object-cover"
+                                              />
+                                            ) : (
+                                              <div className="bg-gray-100 h-full w-full flex items-center justify-center">
+                                                <Package className="h-4 w-4 text-gray-400" />
+                                              </div>
+                                            )}
+                                          </div>
+                                          <span className="text-sm text-green-700">{item.name} (×{item.quantity})</span>
+                                        </div>
+                                      ))}
+                                      {order.items.length > 3 && (
+                                        <div className="text-sm text-green-600">
+                                          +{order.items.length - 3} more
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className="flex justify-end mt-2">
+                                    <div className="flex items-center text-pink-500 text-sm font-medium">
+                                      View Details <ChevronRight className="h-4 w-4 ml-1" />
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </Link>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
                   )}
                 </CardContent>
               </Card>

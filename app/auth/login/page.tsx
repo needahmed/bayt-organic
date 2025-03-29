@@ -28,11 +28,18 @@ function LoginForm() {
   const [error, setError] = useState("")
   const [successMessage, setSuccessMessage] = useState("")
   
-  // Check if user was redirected from signup
+  // Check if user was redirected from signup, verification, or password reset
   useEffect(() => {
     const registered = searchParams.get("registered")
+    const verified = searchParams.get("verified")
+    const passwordReset = searchParams.get("passwordReset")
+    
     if (registered === "true") {
-      setSuccessMessage("Account created successfully! Please sign in.")
+      setSuccessMessage("Account created successfully! Please verify your email to continue.")
+    } else if (verified === "true") {
+      setSuccessMessage("Email verified successfully! You can now log in.")
+    } else if (passwordReset === "true") {
+      setSuccessMessage("Password reset successfully! You can now log in with your new password.")
     }
     
     // Clear any error on mount
@@ -73,7 +80,13 @@ function LoginForm() {
 
       if (result?.error) {
         console.log("Login failed:", result.error);
-        setError("Invalid email or password. Please try again.");
+        
+        // Check if error is because email is not verified
+        if (result.error.includes("Email not verified")) {
+          setError("Please verify your email before logging in. Check your inbox for a verification link.");
+        } else {
+          setError("Invalid email or password. Please try again.");
+        }
       } else {
         console.log("Login successful, fetching session...");
         

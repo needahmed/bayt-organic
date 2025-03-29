@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { motion } from "framer-motion"
-import { CheckCircle, ChevronLeft, Package, Truck, Clock, AlertCircle } from "lucide-react"
+import { CheckCircle, ChevronLeft, Package, Truck, Clock, AlertCircle, Mail } from "lucide-react"
 import { getOrderById } from "@/app/actions/orders.action"
 import { toast } from "sonner"
 
@@ -178,6 +178,12 @@ function OrderConfirmation() {
             <p className="text-green-700 max-w-md mx-auto">
               Thank you for your order. We've received your order and will begin processing it right away.
             </p>
+            <div className="flex items-center justify-center mt-4">
+              <Mail className="h-5 w-5 text-green-600 mr-2" />
+              <p className="text-green-600 text-sm">
+                We've sent an order confirmation email with all the details to {order.user?.email || "your email address"}.
+              </p>
+            </div>
           </motion.div>
         </div>
 

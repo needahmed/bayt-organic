@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/server/auth-utils";
+import { sendVerificationEmail } from "@/lib/email-utils";
+import crypto from "crypto";
 
 export async function POST(request: Request) {
   try {
@@ -24,6 +26,13 @@ export async function POST(request: Request) {
     // Hash the password using the server-only utility
     const hashedPassword = await hashPassword(password);
 
+    // Generate verification token
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    
+    // Set expiration time to 24 hours from now
+    const tokenExpires = new Date();
+    tokenExpires.setHours(tokenExpires.getHours() + 24);
+
     // Create the user
     const user = await prisma.user.create({
       data: {
@@ -31,8 +40,25 @@ export async function POST(request: Request) {
         email,
         password: hashedPassword,
         role: "CUSTOMER",
+        emailVerified: null, // Mark as not verified
       },
     });
+
+    // Create the verification token
+    await prisma.verificationToken.create({
+      data: {
+        identifier: email,
+        token: verificationToken,
+        expires: tokenExpires,
+      },
+    });
+
+    // Send verification email
+    await sendVerificationEmail(
+      email,
+      verificationToken,
+      `${firstName} ${lastName}`
+    );
 
     // Return the user without the password
     return NextResponse.json(
@@ -41,6 +67,7 @@ export async function POST(request: Request) {
         name: user.name,
         email: user.email,
         role: user.role,
+        requiresVerification: true,
       },
       { status: 201 }
     );
