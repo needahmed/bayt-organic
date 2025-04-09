@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Plus, Search, MoreHorizontal, Edit, Trash, Eye, Package } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { getCollections } from "@/app/actions/collections.action"
+import { getCollections, deleteCollection } from "@/app/actions/collections.action"
 import { toast } from "sonner"
 import { ManageCollectionProducts } from "@/components/admin/manage-collection-products"
 
@@ -87,6 +87,27 @@ export default function CollectionsPage() {
       setSelectedCollections(selectedCollections.filter((id) => id !== collectionId))
     }
   }
+
+  // Define the delete handler function
+  const handleDeleteCollection = async (collectionId: string) => {
+    if (confirm("Are you sure you want to delete this collection? This cannot be undone.")) {
+      try {
+        const result = await deleteCollection(collectionId);
+        if (result.success) {
+          toast.success("Collection deleted successfully");
+          // Remove the collection from the state
+          setCollections(collections.filter(collection => collection.id !== collectionId));
+          // Clear selection if the deleted item was selected
+          setSelectedCollections(selectedCollections.filter(id => id !== collectionId));
+        } else {
+          toast.error(result.error || "Failed to delete collection");
+        }
+      } catch (err) {
+        toast.error("An error occurred while deleting the collection");
+        console.error("Delete collection error:", err);
+      }
+    }
+  };
 
   const isAllSelected = filteredCollections.length > 0 && selectedCollections.length === filteredCollections.length
   const isPartiallySelected = selectedCollections.length > 0 && !isAllSelected
@@ -233,7 +254,10 @@ export default function CollectionsPage() {
                               />
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-600">
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => handleDeleteCollection(collection.id)}
+                            >
                               <Trash className="mr-2 h-4 w-4" />
                               Delete
                             </DropdownMenuItem>

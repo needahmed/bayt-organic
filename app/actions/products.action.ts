@@ -173,7 +173,10 @@ export async function createProduct(data: ProductFormData) {
     if (data.ingredients !== undefined) createData.ingredients = data.ingredients
     if (data.howToUse !== undefined) createData.howToUse = data.howToUse
     if (data.stock !== undefined) createData.stock = Number(data.stock)
-    if (data.status) createData.status = data.status
+    if (data.status) {
+      // Ensure status matches the Prisma enum (likely uppercase)
+      createData.status = data.status.toUpperCase() as ProductStatus;
+    }
     
     // Always include images array, even if empty
     // Don't use placeholder images as they're causing 500 errors
@@ -382,7 +385,10 @@ export async function updateProduct(id: string, data: ProductFormData) {
     if (data.ingredients !== undefined) updateData.ingredients = data.ingredients
     if (data.howToUse !== undefined) updateData.howToUse = data.howToUse
     if (data.stock !== undefined) updateData.stock = Number(data.stock)
-    if (data.status) updateData.status = data.status
+    if (data.status) {
+       // Ensure status matches the Prisma enum (likely uppercase)
+      updateData.status = data.status.toUpperCase() as ProductStatus;
+    }
     
     // Only include category if categoryId is defined
     if (data.categoryId) {
@@ -425,16 +431,31 @@ export async function updateProduct(id: string, data: ProductFormData) {
 // Delete a product
 export async function deleteProduct(id: string) {
   try {
+    // First, check if the product is part of any order items
+    const orderItemsCount = await prisma.orderItem.count({
+      where: { productId: id },
+    })
+
+    if (orderItemsCount > 0) {
+      return {
+        success: false,
+        error: "Cannot delete product. It is part of existing orders.",
+      }
+    }
+
+    // If no order items, proceed with deletion
     // Get the product to delete its images
     const product = await prisma.product.findUnique({
       where: { id },
-      select: { images: true }
+      select: { images: true },
     })
-    
+
     if (!product) {
-      return { success: false, error: 'Product not found' }
+      // This case might be less likely now due to the order item check,
+      // but keep it for robustness
+      return { success: false, error: "Product not found" }
     }
-    
+
     // Delete images from Azure Blob Storage
     try {
       for (const imageUrl of product.images) {

@@ -180,6 +180,23 @@ export async function updateCollection(id: string, data: CollectionFormData) {
 // Delete a collection
 export async function deleteCollection(id: string) {
   try {
+    // First, check if any products are linked to this collection
+    const productCount = await prisma.product.count({
+      where: {
+        collectionIds: {
+          has: id
+        }
+      }
+    });
+
+    if (productCount > 0) {
+      return {
+        success: false,
+        error: `Cannot delete collection. ${productCount} product(s) are still linked to it.`,
+      };
+    }
+
+    // If no products are linked, proceed with deletion
     // Get the collection to delete its image
     const collection = await prisma.collection.findUnique({
       where: { id },
