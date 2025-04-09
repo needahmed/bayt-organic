@@ -136,12 +136,17 @@ export default function AddProductPage() {
         return
       }
 
-      // Create product data object
+      // Create product data object - REVERTED: Still using existingImages
       const productFormData: ProductFormData = {
         ...productData,
+        // Keep original type conversions/handling
+        price: productData.price,
+        discountedPrice: productData.discountedPrice,
+        stock: productData.stock,
+        benefits: productData.benefits, 
         collectionIds: selectedCollections,
-        existingImages: productImages,
-        images: null // No file uploads in this form, using existingImages instead
+        existingImages: productImages, // Send URLs for now
+        images: null // Still sending null for File objects
       }
 
       // Create product
@@ -366,9 +371,9 @@ export default function AddProductPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <ImageUpload 
-                  images={productImages}
-                  onChange={handleImagesChange}
-                  maxImages={5}
+                   images={productImages}
+                   onChange={handleImagesChange}
+                   maxImages={5}
                 />
               </CardContent>
             </Card>

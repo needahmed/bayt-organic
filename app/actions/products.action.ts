@@ -69,145 +69,99 @@ export async function getProductById(id: string) {
 // Create a new product
 export async function createProduct(data: ProductFormData) {
   try {
-    // Debug the incoming data
-    console.log('Creating product with data:', {
-      ...data,
-      images: data.images ? `${data.images.length} image(s)` : 'no images',
-      existingImages: data.existingImages || 'none'
-    });
-    
-    // Validate required fields - only check if data exists, not specific fields
-    if (!data) {
-      console.error('Missing product data')
-      return { success: false, error: 'Missing product data' }
-    }
-
-    // Handle FormData conversion for benefits
-    let benefits: string[] = []
-    if (data.benefits) {
-      // If benefits is a string, convert it to an array
-      if (typeof data.benefits === 'string') {
-        benefits = data.benefits.split(',').map((b: string) => b.trim())
-      } else {
-        benefits = data.benefits as string[]
-      }
-    }
-
-    // Handle FormData conversion for collectionIds
-    let collectionIds: string[] = []
-    if (data.collectionIds) {
-      // If collectionIds is a string, convert it to an array
-      if (typeof data.collectionIds === 'string') {
-        collectionIds = [data.collectionIds]
-      } else {
-        collectionIds = data.collectionIds
-      }
-    }
-
-    // Process image URLs passed as existingImages
     let imageUrls: string[] = [];
-    if (data.existingImages) {
-      console.log('Using provided existingImages as product images:', data.existingImages);
-      if (typeof data.existingImages === 'string') {
-        // Single URL as string
-        imageUrls = [data.existingImages];
-      } else {
-        // Array of URLs
-        imageUrls = data.existingImages;
-      }
-    }
     
-    // Also handle File objects for backward compatibility
+    // 1. Handle new file uploads if data.images is provided
     if (data.images && data.images.length > 0) {
-      try {
-        console.log(`Processing ${data.images.length} image file(s)...`);
+      console.log(`Processing ${data.images.length} new image file(s)...`);
+      const validFiles = Array.isArray(data.images) 
+        ? data.images.filter(img => img instanceof File && img.size > 0)
+        : [];
         
-        // Filter out any non-File objects (this can happen with FormData)
-        const validFiles = Array.isArray(data.images) 
-          ? data.images.filter(img => img instanceof File && img.size > 0)
-          : [];
-          
-        console.log(`Found ${validFiles.length} valid files to upload`);
-        
-        for (const image of validFiles) {
-          console.log(`Uploading image: ${image.name}, size: ${image.size}, type: ${image.type}`);
-          try {
-            const buffer = Buffer.from(await image.arrayBuffer());
-            console.log(`Buffer created for image: ${image.name}, buffer length: ${buffer.length}`);
-            const imageUrl = await uploadFile(buffer, image.name);
-            console.log(`Result from uploadFile for ${image.name}: ${imageUrl}`);
-            if (imageUrl && imageUrl !== '') {
-              imageUrls.push(imageUrl);
-            } else {
-              console.warn(`uploadFile returned an empty URL for image: ${image.name}`);
-            }
-          } catch (err) {
-            console.error(`Failed to upload image ${image.name}:`, err);
-            // Continue with other images even if one fails
-          }
+      console.log(`Found ${validFiles.length} valid files to upload`);
+      
+      for (const file of validFiles) {
+        try {
+          // Convert File to Buffer
+          const buffer = Buffer.from(await file.arrayBuffer());
+          // Pass Buffer and filename to uploadFile
+          const url = await uploadFile(buffer, file.name); 
+          imageUrls.push(url);
+          console.log(`Successfully uploaded image: ${url}`);
+        } catch (err) {
+          console.error('Error uploading file:', err);
+          // Decide if one failed upload should stop the whole process
+          // return { success: false, error: 'Failed to upload one or more images' };
+          // Or continue and log:
+          console.warn('Continuing product creation despite image upload failure.')
         }
-        
-        console.log(`After uploads, final image list contains ${imageUrls.length} URLs: ${imageUrls.join(', ')}`);
-      } catch (error) {
-        console.error('Error in image upload process:', error);
-        // Continue with product creation even if image uploads fail
       }
     }
     
-    // Prepare create data with only defined fields
+    // 2. Include pre-uploaded image URLs passed via existingImages
+    //    (Relevant for scenarios like the AddProductPage where ImageUpload uploads immediately)
+    if (data.existingImages && Array.isArray(data.existingImages)) {
+       // Filter out any empty strings or potential non-strings if necessary
+      const validExistingUrls = data.existingImages.filter(url => typeof url === 'string' && url.trim() !== '');
+      imageUrls = [...imageUrls, ...validExistingUrls];
+    }
+    
+    // Remove duplicates just in case
+    imageUrls = [...new Set(imageUrls)];
+
+    // Prepare data for Prisma
     const createData: any = {
-      name: data.name || 'Untitled Product',
-      benefits: benefits,
-      category: {
-        connect: { id: data.categoryId }
-      }
-    }
+      name: data.name,
+      description: data.description,
+      category: { connect: { id: data.categoryId } },
+      // Ensure numeric fields are numbers
+      price: Number(data.price),
+      discountedPrice: (data.discountedPrice !== undefined && data.discountedPrice !== '') ? Number(data.discountedPrice) : undefined,
+      weight: data.weight,
+      ingredients: data.ingredients,
+      // Ensure benefits is an array of strings
+      benefits: Array.isArray(data.benefits) ? data.benefits : (typeof data.benefits === 'string' ? data.benefits.split(',').map(s => s.trim()).filter(Boolean) : []),
+      howToUse: data.howToUse,
+      stock: Number(data.stock),
+      // Use ACTIVE as a valid default status
+      status: (data.status.toUpperCase() as ProductStatus) || ProductStatus.ACTIVE,
+      images: imageUrls, // Use the combined list of URLs
+    };
     
-    // Only include fields that are defined
-    if (data.description) createData.description = data.description
-    if (data.price !== undefined) createData.price = Number(data.price)
-    if (data.discountedPrice !== undefined && data.discountedPrice !== '') {
-      createData.discountedPrice = Number(data.discountedPrice)
-    }
-    if (data.weight !== undefined) createData.weight = data.weight
-    if (data.ingredients !== undefined) createData.ingredients = data.ingredients
-    if (data.howToUse !== undefined) createData.howToUse = data.howToUse
-    if (data.stock !== undefined) createData.stock = Number(data.stock)
-    if (data.status) {
-      // Ensure status matches the Prisma enum (likely uppercase)
-      createData.status = data.status.toUpperCase() as ProductStatus;
-    }
-    
-    // Always include images array, even if empty
-    // Don't use placeholder images as they're causing 500 errors
-    createData.images = imageUrls.filter(url => 
-      url && url !== '' && !url.includes('placeholder') && !url.includes('via.placeholder.com')
-    );
-    console.log('Final image URLs being saved:', createData.images);
-    
-    // Only include collections if collectionIds is defined and has items
+    // Handle collections connection
+    const collectionIds = Array.isArray(data.collectionIds) 
+      ? data.collectionIds 
+      : (typeof data.collectionIds === 'string' ? [data.collectionIds] : []);
+      
     if (collectionIds.length > 0) {
       createData.collections = {
         connect: collectionIds.map(id => ({ id }))
       }
     }
-    
-    console.log('Creating product with data:', createData)
-    
+
+    // Log before creating
+    console.log('Creating product with final data:', JSON.stringify(createData, null, 2))
+
     // Create the product in the database
     const product = await prisma.product.create({
-      data: createData
-    })
-    
+      data: createData,
+    });
+
     console.log('Product created successfully:', product)
     
-    revalidatePath('/admin/products')
-    revalidatePath('/products')
-    
-    return { success: true, data: product }
+    // Revalidate paths
+    revalidatePath('/admin/products');
+    revalidatePath('/products');
+    // Consider revalidating category/collection pages if needed
+
+    return { success: true, data: product };
   } catch (error) {
     console.error('Error creating product:', error)
-    return { success: false, error: 'Failed to create product' }
+    // Provide more specific error feedback if possible
+    if (error instanceof Error && error.message.includes('Unique constraint failed')) {
+       return { success: false, error: 'A product with this name/slug might already exist.' };
+    }
+    return { success: false, error: 'Failed to create product. Check server logs for details.' };
   }
 }
 
