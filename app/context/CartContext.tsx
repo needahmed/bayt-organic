@@ -27,6 +27,9 @@ type CartContextType = {
   subtotal: number
   total: number
   itemCount: number
+  isCartOpen: boolean
+  openCart: () => void
+  closeCart: () => void
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
@@ -34,6 +37,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined)
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isCartOpen, setIsCartOpen] = useState(false)
   const { toast } = useToast()
   const [userId, setUserId] = useState<string | null>(null)
 
@@ -244,6 +248,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // Cart sidebar controls
+  const openCart = () => setIsCartOpen(true)
+  const closeCart = () => setIsCartOpen(false)
+
   return (
     <CartContext.Provider
       value={{
@@ -255,7 +263,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
         isLoading,
         subtotal,
         total,
-        itemCount
+        itemCount,
+        isCartOpen,
+        openCart,
+        closeCart
       }}
     >
       {children}

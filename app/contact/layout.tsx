@@ -1,7 +1,7 @@
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 
-export default function BlogLayout({
+export default function ContactLayout({
   children,
 }: {
   children: React.ReactNode

@@ -248,6 +248,15 @@ enum DiscountType {
   FIXED
 }
 
+model Newsletter {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String   @unique
+  name      String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 // Shipping settings models
 model ShippingRule {
   id            String  @id @default(auto()) @map("_id") @db.ObjectId

@@ -1,6 +1,7 @@
 import { Playfair_Display as PlayfairDisplay, Poppins } from 'next/font/google'
 import AzureInitializer from './components/AzureInitializer'
 import { Providers } from './providers'
+import { CartSidebar } from '@/components/ui/cart-sidebar'
 import './globals.css'
 
 const poppins = Poppins({
@@ -27,6 +28,7 @@ export default function RootLayout({
         
         <Providers>
           {children}
+          <CartSidebar />
         </Providers>
       </body>
     </html>

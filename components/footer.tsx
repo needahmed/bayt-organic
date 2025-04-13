@@ -1,8 +1,51 @@
+"use client"
+
 import Link from "next/link"
 import Image from "next/image"
 import { Facebook, Instagram, Twitter } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
 
 export default function Footer() {
+  const { toast } = useToast()
+
+  const handleNewsletterSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const form = e.currentTarget
+    const emailInput = form.querySelector('input[type="email"]') as HTMLInputElement
+    const email = emailInput.value
+    
+    try {
+      const response = await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        toast({
+          title: "Success!",
+          description: data.message || "You've been subscribed to our newsletter.",
+          variant: "default"
+        })
+        emailInput.value = ''
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to subscribe. Please try again.",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to subscribe. Please try again.",
+        variant: "destructive"
+      })
+    }
+  }
+
   return (
     <footer className="bg-green-50 pt-16 pb-8">
       <div className="container mx-auto px-4">
@@ -88,7 +131,7 @@ export default function Footer() {
             <p className="text-green-700 mb-4">
               Subscribe to our newsletter for updates on new products and special offers.
             </p>
-            <form className="space-y-2">
+            <form className="space-y-2" onSubmit={handleNewsletterSubmit}>
               <input
                 type="email"
                 placeholder="Your email address"

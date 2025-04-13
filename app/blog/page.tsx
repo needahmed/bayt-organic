@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { motion } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
 import { ArrowRight, Clock, Tag } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
 
 // Define blog post types
 type BlogPost = {
@@ -24,6 +25,7 @@ type BlogPost = {
 
 export default function BlogPage() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const { toast } = useToast()
   
   // List of all blog articles
   const articles: BlogPost[] = [
@@ -137,8 +139,11 @@ export default function BlogPage() {
             key={category.slug}
             variant="outline" 
             className={`text-sm py-2 px-4 cursor-pointer hover:bg-green-50 ${
-              category.slug === 'all' ? 'bg-green-100 border-green-300' : ''
+              (category.slug === activeCategory) || (category.slug === 'all' && !activeCategory) 
+                ? 'bg-green-100 border-green-300' 
+                : ''
             }`}
+            onClick={() => setActiveCategory(category.slug === 'all' ? null : category.slug)}
           >
             {category.name}
           </Badge>
@@ -262,16 +267,56 @@ export default function BlogPage() {
         <p className="text-green-600 mb-6 max-w-2xl mx-auto">
           Get the latest natural skincare tips, DIY recipes, and exclusive offers delivered straight to your inbox.
         </p>
-        <div className="flex flex-col sm:flex-row max-w-md mx-auto gap-3">
+        <form
+          className="flex flex-col sm:flex-row max-w-md mx-auto gap-3"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const form = e.currentTarget;
+            const emailInput = form.querySelector('input[type="email"]') as HTMLInputElement;
+            const email = emailInput.value;
+            
+            try {
+              const response = await fetch('/api/newsletter', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+              });
+              
+              const data = await response.json();
+              
+              if (data.success) {
+                toast({
+                  title: "Success!",
+                  description: data.message || "You've been subscribed to our newsletter.",
+                  variant: "default"
+                });
+                emailInput.value = '';
+              } else {
+                toast({
+                  title: "Error",
+                  description: data.error || "Failed to subscribe. Please try again.",
+                  variant: "destructive"
+                });
+              }
+            } catch (error) {
+              toast({
+                title: "Error",
+                description: "Failed to subscribe. Please try again.",
+                variant: "destructive"
+              });
+            }
+          }}
+        >
           <input
             type="email"
             placeholder="Your email address"
             className="px-4 py-2 border border-green-300 rounded-md flex-grow focus:outline-none focus:ring-2 focus:ring-green-500"
+            required
           />
-          <Button className="bg-green-700 hover:bg-green-800 text-white">
+          <Button type="submit" className="bg-green-700 hover:bg-green-800 text-white">
             Subscribe
           </Button>
-        </div>
+        </form>
       </motion.div>
     </div>
   )

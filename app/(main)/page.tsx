@@ -12,6 +12,8 @@ import { getCollectionBySlug } from "@/app/actions/collections.action"
 import { ensureFeaturedCollection } from "@/app/actions/setup.action"
 import { Product, Category } from "@prisma/client"
 import { getCategories } from "@/app/actions/categories.action"
+import { useCart } from "@/app/context/CartContext"
+import { useToast } from "@/components/ui/use-toast"
 
 // Define the product type with related entities
 type ProductWithRelations = Product & {
@@ -45,6 +47,8 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [categories, setCategories] = useState<CategoryWithRelations[]>([])
+  const { addItem, openCart } = useCart()
+  const { toast } = useToast()
 
   const scrollRef = useRef(null)
   const { scrollYProgress } = useScroll({
@@ -223,11 +227,11 @@ export default function Home() {
               Organic.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" className="bg-green-700 hover:bg-green-800 text-white">
-                Shop Now
+              <Button size="lg" className="bg-green-700 hover:bg-green-800 text-white" asChild>
+                <Link href="/products">Shop Now</Link>
               </Button>
-              <Button size="lg" variant="outline" className="border-green-700 text-green-700 hover:bg-green-50">
-                Learn More
+              <Button size="lg" variant="outline" className="border-green-700 text-green-700 hover:bg-green-50" asChild>
+                <Link href="/about">Learn More</Link>
               </Button>
             </div>
           </motion.div>
@@ -344,8 +348,27 @@ export default function Home() {
                         ) : (
                           <p className="text-pink-500 font-semibold">Rs. {product.price}</p>
                         )}
-                        <Button className="w-full mt-3 bg-green-700 hover:bg-green-800 text-white" size="sm">
-                          View Product
+                        <Button 
+                          className="w-full mt-3 bg-green-700 hover:bg-green-800 text-white" 
+                          size="sm"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            const productImage = product.images && product.images.length > 0 
+                              ? product.images[0] 
+                              : "/placeholder.svg";
+                            addItem({
+                              productId: product.id,
+                              name: product.name,
+                              price: product.price,
+                              discountedPrice: product.discountedPrice || undefined,
+                              quantity: 1,
+                              image: productImage,
+                              weight: product.weight || "150g"
+                            });
+                            openCart();
+                          }}
+                        >
+                          Add to Cart
                         </Button>
                       </CardContent>
                     </Card>
@@ -634,15 +657,54 @@ export default function Home() {
               <p className="text-green-700 mb-6">
                 Subscribe to receive updates, exclusive offers, and natural living tips
               </p>
-              <div className="flex flex-col sm:flex-row gap-2 max-w-md mx-auto">
+              <form 
+                className="flex flex-col sm:flex-row gap-2 max-w-md mx-auto"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const form = e.currentTarget;
+                  const emailInput = form.querySelector('input[type="email"]') as HTMLInputElement;
+                  const email = emailInput.value;
+                  
+                  try {
+                    const response = await fetch('/api/newsletter', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ email })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                      toast({
+                        title: "Success!",
+                        description: data.message || "You've been subscribed to our newsletter.",
+                        variant: "default"
+                      });
+                      emailInput.value = '';
+                    } else {
+                      toast({
+                        title: "Error",
+                        description: data.error || "Failed to subscribe. Please try again.",
+                        variant: "destructive"
+                      });
+                    }
+                  } catch (error) {
+                    toast({
+                      title: "Error",
+                      description: "Failed to subscribe. Please try again.",
+                      variant: "destructive"
+                    });
+                  }
+                }}
+              >
                 <input
                   type="email"
                   placeholder="Your email address"
                   className="flex-1 px-4 py-3 rounded-md border border-green-200 focus:outline-none focus:ring-2 focus:ring-green-500"
                   required
                 />
-                <Button className="bg-green-700 hover:bg-green-800 text-white">Subscribe</Button>
-              </div>
+                <Button type="submit" className="bg-green-700 hover:bg-green-800 text-white">Subscribe</Button>
+              </form>
             </motion.div>
           </div>
         </div>

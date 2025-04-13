@@ -35,7 +35,7 @@ export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
-  const { itemCount } = useCart()
+  const { itemCount, openCart } = useCart()
   const [categories, setCategories] = useState<NavCategory[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -139,7 +139,11 @@ export default function Header() {
         <div className="hidden md:flex items-center space-x-8">
           <NavigationMenu>
             <NavigationMenuList>
-              {categories.length > 0 ? (
+              {isLoading ? (
+                // Loading state
+                <NavigationMenuItem>
+                </NavigationMenuItem>
+              ) : categories.length > 0 ? (
                 // Display dynamically fetched categories
                 categories.map((category) => (
                   <NavigationMenuItem key={category.id}>
@@ -190,57 +194,10 @@ export default function Header() {
                   </NavigationMenuItem>
                 ))
               ) : (
-                // Fallback to static menu items if categories aren't loaded yet
-                <>
-                  <NavigationMenuItem>
-                    <Link href="/products/soaps" legacyBehavior passHref>
-                      <NavigationMenuLink
-                        className={cn(navigationMenuTriggerStyle(), "text-green-700 hover:text-green-800 font-medium")}
-                      >
-                        Soaps
-                      </NavigationMenuLink>
-                    </Link>
-                  </NavigationMenuItem>
-                  <NavigationMenuItem>
-                    <Link href="/products/shampoos" legacyBehavior passHref>
-                      <NavigationMenuLink
-                        className={cn(navigationMenuTriggerStyle(), "text-green-700 hover:text-green-800 font-medium")}
-                      >
-                        Shampoos
-                      </NavigationMenuLink>
-                    </Link>
-                  </NavigationMenuItem>
-                  <NavigationMenuItem>
-                    <NavigationMenuTrigger className="text-green-700 hover:text-green-800 font-medium">
-                      Body Care
-                    </NavigationMenuTrigger>
-                    <NavigationMenuContent>
-                      <ul className="grid w-[200px] gap-3 p-4">
-                        {bodyProducts.map((product) => (
-                          <li key={product.title}>
-                            <NavigationMenuLink asChild>
-                              <Link
-                                href={product.href}
-                                className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-green-50 hover:text-green-800"
-                              >
-                                <div className="text-sm font-medium">{product.title}</div>
-                              </Link>
-                            </NavigationMenuLink>
-                          </li>
-                        ))}
-                      </ul>
-                    </NavigationMenuContent>
-                  </NavigationMenuItem>
-                  <NavigationMenuItem>
-                    <Link href="/products/accessories" legacyBehavior passHref>
-                      <NavigationMenuLink
-                        className={cn(navigationMenuTriggerStyle(), "text-green-700 hover:text-green-800 font-medium")}
-                      >
-                        Accessories
-                      </NavigationMenuLink>
-                    </Link>
-                  </NavigationMenuItem>
-                </>
+                // No categories found message
+                <NavigationMenuItem>
+                  <span className="px-4 py-2 text-sm text-red-500">Failed to load categories</span>
+                </NavigationMenuItem>
               )}
             </NavigationMenuList>
           </NavigationMenu>
@@ -256,17 +213,15 @@ export default function Header() {
               <User className="h-5 w-5" />
             </Link>
           </Button>
-          <Button variant="ghost" size="icon" className="text-green-700" asChild>
-            <Link href="/cart">
-              <div className="relative">
-                <ShoppingBag className="h-5 w-5" />
-                {itemCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                    {itemCount > 99 ? '99+' : itemCount}
-                  </span>
-                )}
-              </div>
-            </Link>
+          <Button variant="ghost" size="icon" className="text-green-700" onClick={openCart}>
+            <div className="relative">
+              <ShoppingBag className="h-5 w-5" />
+              {itemCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {itemCount > 99 ? '99+' : itemCount}
+                </span>
+              )}
+            </div>
           </Button>
         </div>
 
@@ -380,17 +335,15 @@ export default function Header() {
                     <User className="h-5 w-5" />
                   </Link>
                 </Button>
-                <Button variant="ghost" size="icon" className="text-green-700" asChild>
-                  <Link href="/cart">
-                    <div className="relative">
-                      <ShoppingBag className="h-5 w-5" />
-                      {itemCount > 0 && (
-                        <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                          {itemCount > 99 ? '99+' : itemCount}
-                        </span>
-                      )}
-                    </div>
-                  </Link>
+                <Button variant="ghost" size="icon" className="text-green-700" onClick={openCart}>
+                  <div className="relative">
+                    <ShoppingBag className="h-5 w-5" />
+                    {itemCount > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {itemCount > 99 ? '99+' : itemCount}
+                      </span>
+                    )}
+                  </div>
                 </Button>
               </div>
             </div>
