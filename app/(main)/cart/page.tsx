@@ -25,6 +25,14 @@ export default function CartPage() {
   const [shippingMessage, setShippingMessage] = useState("")
   const [isLoadingShipping, setIsLoadingShipping] = useState(true)
   const [freeShippingThreshold, setFreeShippingThreshold] = useState(2000)
+  const [initialLoading, setInitialLoading] = useState(true)
+
+  useEffect(() => {
+    // Set initialLoading to false after the first render
+    if (isLoading === false) {
+      setInitialLoading(false)
+    }
+  }, [isLoading])
 
   useEffect(() => {
     const loadShippingCost = async () => {
@@ -97,7 +105,8 @@ export default function CartPage() {
 
   const finalTotal = (total - discount) + shippingCost;
 
-  if (isLoading || isLoadingShipping) {
+  // Only show loading on initial page load, not during quantity updates
+  if (initialLoading || (isLoadingShipping && initialLoading)) {
     return (
       <div className="pt-24 pb-16">
         <div className="container mx-auto px-4">
@@ -110,6 +119,18 @@ export default function CartPage() {
         </div>
       </div>
     )
+  }
+
+  // Handle quantity updates without showing loading state
+  const handleUpdateQuantity = (id: string, newQuantity: number) => {
+    if (newQuantity < 1) return;
+    
+    // Optimistically update the UI first
+    const itemToUpdate = cartItems.find(item => item.id === id);
+    if (itemToUpdate) {
+      // Call the update function from context
+      updateItemQuantity(id, newQuantity);
+    }
   }
 
   return (
@@ -186,8 +207,9 @@ export default function CartPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => updateItemQuantity(item.id, item.quantity - 1)}
+                              onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
                               className="h-8 w-8 rounded-none text-green-700"
+                              disabled={item.quantity <= 1}
                             >
                               <Minus className="h-3 w-3" />
                             </Button>
@@ -195,7 +217,7 @@ export default function CartPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => updateItemQuantity(item.id, item.quantity + 1)}
+                              onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
                               className="h-8 w-8 rounded-none text-green-700"
                             >
                               <Plus className="h-3 w-3" />
