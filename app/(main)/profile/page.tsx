@@ -17,6 +17,8 @@ import { useToast } from "@/components/ui/use-toast"
 import { Badge } from "@/components/ui/badge"
 import { getOrdersForCurrentUser } from "@/app/actions/orders.action"
 import { useSession } from "next-auth/react"
+import { useWishlist } from "@/app/context/WishlistContext"
+import { useCart } from "@/app/context/CartContext"
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("profile")
@@ -26,6 +28,8 @@ export default function ProfilePage() {
   const router = useRouter()
   const { toast } = useToast()
   const { data: session, status } = useSession()
+  const { wishlistItems, removeFromWishlist } = useWishlist()
+  const { addItem, openCart } = useCart()
   
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -275,28 +279,6 @@ export default function ProfilePage() {
       </div>
     )
   }
-
-  // Sample wishlist - in a real app, this would come from the database
-  const wishlist = [
-    {
-      id: 1,
-      name: "Neem Body Soap",
-      price: 900,
-      image: "/placeholder.svg?height=300&width=300",
-    },
-    {
-      id: 2,
-      name: "Hair Growth Oil",
-      price: 1200,
-      image: "/placeholder.svg?height=300&width=300",
-    },
-    {
-      id: 3,
-      name: "Dental Powder",
-      price: 700,
-      image: "/placeholder.svg?height=300&width=300",
-    },
-  ]
 
   return (
     <div className="pt-24 pb-16">
@@ -638,9 +620,9 @@ export default function ProfilePage() {
                   <CardDescription>Products you've saved for later</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {wishlist.length > 0 ? (
+                  {wishlistItems.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {wishlist.map((item) => (
+                      {wishlistItems.map((item) => (
                         <div key={item.id} className="border rounded-lg overflow-hidden group">
                           <div className="relative h-48 overflow-hidden">
                             <Image
@@ -649,21 +631,47 @@ export default function ProfilePage() {
                               fill
                               className="object-cover transition-transform duration-500 group-hover:scale-110"
                             />
-                            <button className="absolute top-2 right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center text-pink-500 hover:text-pink-600">
+                            <button 
+                              className="absolute top-2 right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center text-pink-500 hover:text-pink-600"
+                              onClick={() => removeFromWishlist(item.productId)}
+                            >
                               <Heart className="h-4 w-4 fill-current" />
                             </button>
                           </div>
                           <div className="p-4">
                             <h3 className="font-medium text-green-800 mb-1">{item.name}</h3>
-                            <p className="text-pink-500 font-medium mb-3">Rs. {item.price.toLocaleString()}</p>
+                            {item.discountedPrice ? (
+                              <div>
+                                <span className="text-muted-foreground line-through text-xs">Rs. {item.price}</span>
+                                <p className="text-pink-500 font-medium mb-3">Rs. {item.discountedPrice}</p>
+                              </div>
+                            ) : (
+                              <p className="text-pink-500 font-medium mb-3">Rs. {item.price}</p>
+                            )}
                             <div className="flex space-x-2">
-                              <Button className="flex-1 bg-green-700 hover:bg-green-800 text-white" size="sm">
+                              <Button 
+                                className="flex-1 bg-green-700 hover:bg-green-800 text-white" 
+                                size="sm"
+                                onClick={() => {
+                                  addItem({
+                                    productId: item.productId,
+                                    name: item.name,
+                                    price: item.price,
+                                    discountedPrice: item.discountedPrice || undefined,
+                                    quantity: 1,
+                                    image: item.image,
+                                    weight: item.weight || "150g"
+                                  });
+                                  openCart();
+                                }}
+                              >
                                 Add to Cart
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
                                 className="border-pink-500 text-pink-500 hover:bg-pink-50"
+                                onClick={() => removeFromWishlist(item.productId)}
                               >
                                 Remove
                               </Button>
@@ -672,7 +680,7 @@ export default function ProfilePage() {
                         </div>
                       ))}
                     </div>
-                  ) : (
+                  ) :
                     <div className="text-center py-8">
                       <Heart className="h-12 w-12 text-pink-300 mx-auto mb-4" />
                       <h3 className="font-medium text-green-800 mb-1">Your Wishlist is Empty</h3>
@@ -681,7 +689,7 @@ export default function ProfilePage() {
                         <Link href="/">Explore Products</Link>
                       </Button>
                     </div>
-                  )}
+                  }
                 </CardContent>
               </Card>
             </TabsContent>

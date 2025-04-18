@@ -168,58 +168,77 @@ export async function createProduct(data: ProductFormData) {
 // Update a product
 export async function updateProduct(id: string, data: ProductFormData) {
   try {
-    // Debug the incoming data
-    console.log('Updating product with data:', {
-      ...data,
-      images: data.images ? `${data.images.length} image(s)` : 'no images',
-      existingImages: data.existingImages || 'none',
-      formDataEntries: [...(data as any).entries()].map(([key, value]) => {
-        if (key === 'existingImages') {
-          return { key, value };
-        }
-        return { key, type: typeof value };
-      })
-    });
+    // Debug the incoming data 
+    console.log('⭐ Starting product update for ID:', id);
+    console.log('Incoming data type:', data instanceof FormData ? 'FormData' : typeof data);
     
-    // Validate required fields - only check if data exists, not specific fields
+    // Validate required fields - only check if data exists
     if (!data) {
       console.error('Missing product data')
       return { success: false, error: 'Missing product data' }
     }
 
-    // Handle FormData conversion for benefits
-    let benefits: string[] = []
+    // Convert FormData to a standard object if needed
+    const formDataObj: Record<string, any> = {};
+    if (data instanceof FormData) {
+      console.log('Converting FormData to object...');
+      for (const [key, value] of data.entries()) {
+        // Handle array fields like existingImages[] correctly
+        if (key.endsWith('[]')) {
+          const baseKey = key.slice(0, -2);
+          if (!formDataObj[baseKey]) formDataObj[baseKey] = [];
+          formDataObj[baseKey].push(value);
+        } else {
+          // For fields that might be arrays but don't use [] notation
+          if (key === 'existingImages' || key === 'collectionIds') {
+            if (!formDataObj[key]) formDataObj[key] = [];
+            formDataObj[key].push(value);
+          } else {
+            formDataObj[key] = value;
+          }
+        }
+      }
+      console.log('Converted form data:', JSON.stringify(formDataObj, null, 2));
+      
+      // Use the processed object instead of the original FormData
+      data = { ...formDataObj } as any;
+    }
+
+    // Process benefits
+    let benefits: string[] = [];
     if (data.benefits) {
       // If benefits is a string, convert it to an array
       if (typeof data.benefits === 'string') {
-        benefits = data.benefits.split(',').map((b: string) => b.trim())
+        benefits = data.benefits.split(',').map((b: string) => b.trim()).filter(Boolean);
       } else {
-        benefits = data.benefits as string[]
+        benefits = Array.isArray(data.benefits) ? data.benefits : [data.benefits as string];
       }
     }
+    console.log('Processed benefits:', benefits);
 
-    // Handle FormData conversion for collectionIds
-    let collectionIds: string[] = []
+    // Process collection IDs
+    let collectionIds: string[] = [];
     if (data.collectionIds) {
-      // If collectionIds is a string, convert it to an array
       if (typeof data.collectionIds === 'string') {
-        collectionIds = [data.collectionIds]
-      } else {
-        collectionIds = data.collectionIds
+        collectionIds = [data.collectionIds];
+      } else if (Array.isArray(data.collectionIds)) {
+        collectionIds = data.collectionIds;
       }
     }
+    console.log('Processed collectionIds:', collectionIds);
 
     // Get the existing product
     const existingProduct = await prisma.product.findUnique({
       where: { id },
-      select: { images: true, categoryId: true }
-    })
+      select: { images: true, categoryId: true, collections: true }
+    });
     
     if (!existingProduct) {
-      return { success: false, error: 'Product not found' }
+      return { success: false, error: 'Product not found' };
     }
     
-    console.log('Existing product images:', existingProduct.images)
+    console.log('Found existing product. Current collections:', 
+      existingProduct.collections ? existingProduct.collections.length : 0);
     
     // Initialize imageUrls from data.existingImages if provided (these are from our UI component)
     let imageUrls: string[] = [];
@@ -316,60 +335,59 @@ export async function updateProduct(id: string, data: ProductFormData) {
       }
     }
     
-    // Prepare update data with only defined fields
+    // Prepare update data
     const updateData: any = {
-      benefits: benefits
-    }
+      // Always include these fields for consistency
+      name: data.name,
+      description: data.description,
+      price: Number(data.price || 0),
+      benefits: benefits,
+      // Always update images array
+      images: imageUrls.filter(url => 
+        url && url !== '' && !url.includes('placeholder') && !url.includes('via.placeholder.com')
+      )
+    };
     
-    // Always include images array, even if empty
-    // Filter out any placeholder images
-    updateData.images = imageUrls.filter(url => 
-      url && url !== '' && !url.includes('placeholder') && !url.includes('via.placeholder.com')
-    );
-    console.log('Final image URLs being saved:', updateData.images);
-    
-    // Only include fields that are defined
-    if (data.name) updateData.name = data.name
-    if (data.description) updateData.description = data.description
-    if (data.price !== undefined) updateData.price = Number(data.price)
+    // Include optional fields if provided
     if (data.discountedPrice !== undefined && data.discountedPrice !== '') {
-      updateData.discountedPrice = Number(data.discountedPrice)
+      updateData.discountedPrice = Number(data.discountedPrice);
     }
-    if (data.weight !== undefined) updateData.weight = data.weight
-    if (data.ingredients !== undefined) updateData.ingredients = data.ingredients
-    if (data.howToUse !== undefined) updateData.howToUse = data.howToUse
-    if (data.stock !== undefined) updateData.stock = Number(data.stock)
+    if (data.weight !== undefined) updateData.weight = data.weight;
+    if (data.ingredients !== undefined) updateData.ingredients = data.ingredients;
+    if (data.howToUse !== undefined) updateData.howToUse = data.howToUse;
+    if (data.stock !== undefined) updateData.stock = Number(data.stock || 0);
     if (data.status) {
-       // Ensure status matches the Prisma enum (likely uppercase)
-      updateData.status = data.status.toUpperCase() as ProductStatus;
+      updateData.status = (data.status.toUpperCase() as ProductStatus) || ProductStatus.ACTIVE;
     }
     
-    // Only include category if categoryId is defined
+    // Update category connection
     if (data.categoryId) {
       updateData.category = {
         connect: { id: data.categoryId }
-      }
+      };
     }
     
-    // Only include collections if collectionIds is defined and has items
-    if (collectionIds.length > 0) {
-      updateData.collections = {
-        set: collectionIds.map(id => ({ id }))
-      }
-    }
+    // Always handle collections
+    updateData.collections = {
+      set: collectionIds.length > 0 
+        ? collectionIds.map(id => ({ id }))
+        : [] // Empty array to clear all collections if none provided
+    };
     
-    console.log('Updating product with data:', updateData)
+    console.log('⭐ Updating product with data:', JSON.stringify(updateData, null, 2));
     
     // Update the product
     const product = await prisma.product.update({
       where: { id },
       data: updateData,
       include: {
-        category: true
+        category: true,
+        collections: true
       }
-    })
+    });
     
-    console.log('Product updated successfully:', product)
+    console.log('⭐ Product updated successfully. New collections:', 
+      product.collections ? product.collections.length : 0);
     
     revalidatePath('/admin/products')
     revalidatePath(`/products/${product.category.slug}/${product.id}`)
@@ -385,35 +403,59 @@ export async function updateProduct(id: string, data: ProductFormData) {
 // Delete a product
 export async function deleteProduct(id: string) {
   try {
-    // First, check if the product is part of any order items
+    // First check if the product is in any carts
+    const cartItemCount = await prisma.cartItem.count({
+      where: { productId: id },
+    })
+
+    if (cartItemCount > 0) {
+      console.log(`Cannot delete product ${id}. Found in ${cartItemCount} cart(s).`)
+      return {
+        success: false,
+        error: `Cannot delete product. It is in ${cartItemCount} active cart(s).`,
+      }
+    }
+
+    // Then check if the product is part of any order items
     const orderItemsCount = await prisma.orderItem.count({
       where: { productId: id },
     })
 
     if (orderItemsCount > 0) {
+      console.log(`Cannot delete product ${id}. Found in ${orderItemsCount} order(s).`)
       return {
         success: false,
-        error: "Cannot delete product. It is part of existing orders.",
+        error: `Cannot delete product. It is part of ${orderItemsCount} existing order(s).`,
       }
     }
 
-    // If no order items, proceed with deletion
+    // If no order items or cart items, proceed with deletion
     // Get the product to delete its images
     const product = await prisma.product.findUnique({
       where: { id },
-      select: { images: true },
+      select: { 
+        images: true,
+        name: true
+      },
     })
 
     if (!product) {
-      // This case might be less likely now due to the order item check,
-      // but keep it for robustness
+      console.log(`Product not found with ID ${id}`)
       return { success: false, error: "Product not found" }
     }
 
+    console.log(`Deleting product "${product.name}" (${id})`)
+    
     // Delete images from Azure Blob Storage
     try {
       for (const imageUrl of product.images) {
-        await deleteFile(imageUrl)
+        try {
+          await deleteFile(imageUrl)
+          console.log(`Successfully deleted image: ${imageUrl}`)
+        } catch (err) {
+          console.error(`Failed to delete image ${imageUrl}:`, err)
+          // Continue with other image deletions even if one fails
+        }
       }
     } catch (error) {
       console.error('Error deleting one or more product images:', error)
@@ -425,12 +467,21 @@ export async function deleteProduct(id: string) {
       where: { id },
     })
     
+    console.log(`Successfully deleted product ${id}`)
+    
     revalidatePath('/admin/products')
     revalidatePath('/products')
     
     return { success: true }
   } catch (error) {
     console.error(`Error deleting product with ID ${id}:`, error)
-    return { success: false, error: 'Failed to delete product' }
+    // Provide more specific error message if possible
+    let errorMessage = 'Failed to delete product'
+    
+    if (error instanceof Error) {
+      errorMessage = error.message || errorMessage
+    }
+    
+    return { success: false, error: errorMessage }
   }
 } 

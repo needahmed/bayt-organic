@@ -8,10 +8,11 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { motion } from "framer-motion"
-import { ChevronLeft, Minus, Plus, Star, Truck, Shield, AlertCircle } from "lucide-react"
+import { ChevronLeft, Minus, Plus, Star, Truck, Shield, AlertCircle, Heart } from "lucide-react"
 import { getProductById } from "@/app/actions/products.action"
 import { Product, Category, Collection } from "@prisma/client"
 import { useCart } from "@/app/context/CartContext"
+import { useWishlist } from "@/app/context/WishlistContext"
 
 // Define the product type with related entities
 type ProductWithRelations = Product & {
@@ -31,7 +32,8 @@ export default function ProductPage({ params }: { params: any }) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isAddingToCart, setIsAddingToCart] = useState(false)
-  const { addItem } = useCart()
+  const { addItem, openCart } = useCart()
+  const { addToWishlist, isInWishlist, removeFromWishlist } = useWishlist()
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -176,7 +178,35 @@ export default function ProductPage({ params }: { params: any }) {
               <Badge className="bg-green-100 text-green-800 mb-2">
                 {product.category.name}
               </Badge>
-              <h1 className="font-playfair text-3xl font-bold text-green-800 mb-2">{product.name}</h1>
+              <div className="flex justify-between items-start">
+                <h1 className="font-playfair text-3xl font-bold text-green-800 mb-2">{product.name}</h1>
+                <button 
+                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                    isInWishlist(product.id) 
+                      ? "bg-pink-500 text-white" 
+                      : "bg-white text-pink-500 border border-pink-200 hover:bg-pink-100"
+                  }`}
+                  onClick={() => {
+                    if (isInWishlist(product.id)) {
+                      removeFromWishlist(product.id);
+                    } else {
+                      const productImage = product.images && product.images.length > 0 
+                        ? product.images[0] 
+                        : "/placeholder.svg";
+                      addToWishlist({
+                        productId: product.id,
+                        name: product.name,
+                        price: product.price,
+                        discountedPrice: product.discountedPrice || undefined,
+                        image: productImage,
+                        weight: product.weight || "150g"
+                      });
+                    }
+                  }}
+                >
+                  <Heart className={`h-5 w-5 ${isInWishlist(product.id) ? "fill-current" : ""}`} />
+                </button>
+              </div>
               <div className="flex items-center mb-4">
                 <div className="flex text-amber-400 mr-2">
                   {[...Array(5)].map((_, i) => (

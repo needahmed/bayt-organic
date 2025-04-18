@@ -9,10 +9,12 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { motion } from "framer-motion"
-import { ChevronLeft, AlertCircle } from "lucide-react"
+import { ChevronLeft, AlertCircle, Heart } from "lucide-react"
 import { getProducts } from "@/app/actions/products.action"
 import { getCategories } from "@/app/actions/categories.action"
 import { Product, Category } from "@prisma/client"
+import { useCart } from "@/app/context/CartContext"
+import { useWishlist } from "@/app/context/WishlistContext"
 
 // Define the product type with related entities
 type ProductWithRelations = Product & {
@@ -35,6 +37,8 @@ export default function CategoryPage({ params }: { params: any }) {
   const [subcategories, setSubcategories] = useState<CategoryWithSubcategories[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { addItem, openCart } = useCart()
+  const { addToWishlist, isInWishlist, removeFromWishlist } = useWishlist()
 
   useEffect(() => {
     const fetchData = async () => {
@@ -203,41 +207,91 @@ export default function CategoryPage({ params }: { params: any }) {
               whileHover={{ y: -5 }}
               className="group"
             >
-              <Link href={`/products/${category}/${product.id}`}>
-                <Card className="overflow-hidden border-none shadow-md hover:shadow-lg transition-shadow h-full flex flex-col">
-                  <div className="relative h-64 overflow-hidden">
-                    <Image
-                      src={product.images[0] || "/placeholder.svg"}
-                      alt={product.name}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                    {product.discountedPrice && (
-                      <div className="absolute top-3 right-3">
-                        <Badge className="bg-pink-100 text-pink-800 hover:bg-pink-200">Sale</Badge>
-                      </div>
-                    )}
-                  </div>
-                  <CardContent className="p-4 flex-1 flex flex-col">
+              <Card className="overflow-hidden border-none shadow-md hover:shadow-lg transition-shadow h-full flex flex-col">
+                <div className="relative">
+                  <Link href={`/products/${category}/${product.id}`}>
+                    <div className="relative h-64 overflow-hidden">
+                      <Image
+                        src={product.images[0] || "/placeholder.svg"}
+                        alt={product.name}
+                        fill
+                        className="object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                      {product.discountedPrice && (
+                        <div className="absolute top-3 right-3">
+                          <Badge className="bg-pink-100 text-pink-800 hover:bg-pink-200">Sale</Badge>
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                  <button 
+                    className={`absolute top-3 left-3 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                      isInWishlist(product.id) 
+                        ? "bg-pink-500 text-white" 
+                        : "bg-white text-pink-500 hover:bg-pink-100"
+                    }`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (isInWishlist(product.id)) {
+                        removeFromWishlist(product.id);
+                      } else {
+                        const productImage = product.images && product.images.length > 0 
+                          ? product.images[0] 
+                          : "/placeholder.svg";
+                        addToWishlist({
+                          productId: product.id,
+                          name: product.name,
+                          price: product.price,
+                          discountedPrice: product.discountedPrice || undefined,
+                          image: productImage,
+                          weight: product.weight || "150g"
+                        });
+                      }
+                    }}
+                  >
+                    <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? "fill-current" : ""}`} />
+                  </button>
+                </div>
+                <CardContent className="p-4 flex-1 flex flex-col">
+                  <Link href={`/products/${category}/${product.id}`}>
                     <h3 className="font-medium text-green-800 mb-1">{product.name}</h3>
                     <p className="text-sm text-green-600 mb-2 flex-1">{product.description.substring(0, 100)}...</p>
                     <div className="text-xs text-green-600 mb-2">Weight: {product.weight}</div>
-                    <div className="flex items-center justify-between">
-                      {product.discountedPrice ? (
-                        <div>
-                          <span className="text-muted-foreground line-through text-xs">Rs. {product.price}</span>
-                          <p className="text-pink-500 font-semibold">Rs. {product.discountedPrice}</p>
-                        </div>
-                      ) : (
-                        <p className="text-pink-500 font-semibold">Rs. {product.price}</p>
-                      )}
-                      <Button className="bg-green-700 hover:bg-green-800 text-white" size="sm">
-                        View
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
+                  </Link>
+                  <div className="flex items-center justify-between">
+                    {product.discountedPrice ? (
+                      <div>
+                        <span className="text-muted-foreground line-through text-xs">Rs. {product.price}</span>
+                        <p className="text-pink-500 font-semibold">Rs. {product.discountedPrice}</p>
+                      </div>
+                    ) : (
+                      <p className="text-pink-500 font-semibold">Rs. {product.price}</p>
+                    )}
+                    <Button 
+                      className="bg-green-700 hover:bg-green-800 text-white" 
+                      size="sm"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        const productImage = product.images && product.images.length > 0 
+                          ? product.images[0] 
+                          : "/placeholder.svg";
+                        addItem({
+                          productId: product.id,
+                          name: product.name,
+                          price: product.price,
+                          discountedPrice: product.discountedPrice || undefined,
+                          quantity: 1,
+                          image: productImage,
+                          weight: product.weight || "150g"
+                        });
+                        openCart();
+                      }}
+                    >
+                      Add to Cart
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </motion.div>
           ))}
         </div>

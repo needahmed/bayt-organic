@@ -113,4 +113,85 @@ export async function updateUserProfile(formData: FormData) {
 // Handle user logout
 export async function handleLogout() {
   await signOut({ redirectTo: '/' })
+}
+
+// Get user notifications
+export async function getUserNotifications() {
+  try {
+    const session = await auth()
+    
+    if (!session || !session.user || !session.user.id) {
+      return { success: false, error: 'Not authenticated' }
+    }
+    
+    const notifications = await prisma.notification.findMany({
+      where: { userId: session.user.id },
+      orderBy: { createdAt: 'desc' }
+    })
+    
+    return { 
+      success: true, 
+      data: notifications
+    }
+  } catch (error) {
+    console.error('Error getting user notifications:', error)
+    return { success: false, error: 'Failed to get notifications' }
+  }
+}
+
+// Mark notification as read
+export async function markNotificationAsRead(notificationId: string) {
+  try {
+    const session = await auth()
+    
+    if (!session || !session.user || !session.user.id) {
+      return { success: false, error: 'Not authenticated' }
+    }
+    
+    const notification = await prisma.notification.update({
+      where: { 
+        id: notificationId,
+        userId: session.user.id // Ensure user can only mark their own notifications
+      },
+      data: { read: true }
+    })
+    
+    revalidatePath('/admin')
+    
+    return { 
+      success: true, 
+      data: notification
+    }
+  } catch (error) {
+    console.error('Error marking notification as read:', error)
+    return { success: false, error: 'Failed to mark notification as read' }
+  }
+}
+
+// Create a new notification (admin only)
+export async function createNotification(userId: string, message: string, type: string, link?: string) {
+  try {
+    const session = await auth()
+    
+    if (!session || !session.user || !session.user.id || session.user.role !== 'ADMIN') {
+      return { success: false, error: 'Not authorized' }
+    }
+    
+    const notification = await prisma.notification.create({
+      data: {
+        userId,
+        message,
+        type: type as any,
+        link,
+      }
+    })
+    
+    return { 
+      success: true, 
+      data: notification
+    }
+  } catch (error) {
+    console.error('Error creating notification:', error)
+    return { success: false, error: 'Failed to create notification' }
+  }
 } 

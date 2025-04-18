@@ -14,6 +14,7 @@ import { Product, Category } from "@prisma/client"
 import { getCategories } from "@/app/actions/categories.action"
 import { useCart } from "@/app/context/CartContext"
 import { useToast } from "@/components/ui/use-toast"
+import { useWishlist } from "@/app/context/WishlistContext"
 
 // Define the product type with related entities
 type ProductWithRelations = Product & {
@@ -49,6 +50,7 @@ export default function Home() {
   const [categories, setCategories] = useState<CategoryWithRelations[]>([])
   const { addItem, openCart } = useCart()
   const { toast } = useToast()
+  const { addToWishlist, isInWishlist, removeFromWishlist } = useWishlist()
 
   const scrollRef = useRef(null)
   const { scrollYProgress } = useScroll({
@@ -325,20 +327,51 @@ export default function Home() {
                   whileHover={{ y: -5 }}
                   className="group"
                 >
-                  <Link href={`/products/${product.category.slug}/${product.id}`}>
-                    <Card className="overflow-hidden border-none shadow-md hover:shadow-lg transition-shadow">
-                      <div className="relative h-64 overflow-hidden">
-                        <Image
-                          src={product.images[0] || "/placeholder.svg"}
-                          alt={product.name}
-                          fill
-                          className="object-cover transition-transform duration-500 group-hover:scale-110"
-                        />
-                        <div className="absolute top-3 left-3">
-                          <Badge className="bg-green-100 text-green-800 hover:bg-green-200">{product.category.name}</Badge>
+                  <Card className="overflow-hidden border-none shadow-md hover:shadow-lg transition-shadow">
+                    <div className="relative">
+                      <Link href={`/products/${product.category.slug}/${product.id}`}>
+                        <div className="relative h-64 overflow-hidden">
+                          <Image
+                            src={product.images[0] || "/placeholder.svg"}
+                            alt={product.name}
+                            fill
+                            className="object-cover transition-transform duration-500 group-hover:scale-110"
+                          />
+                          <div className="absolute top-3 left-3">
+                            <Badge className="bg-green-100 text-green-800 hover:bg-green-200">{product.category.name}</Badge>
+                          </div>
                         </div>
-                      </div>
-                      <CardContent className="p-4">
+                      </Link>
+                      <button 
+                        className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                          isInWishlist(product.id) 
+                            ? "bg-pink-500 text-white" 
+                            : "bg-white text-pink-500 hover:bg-pink-100"
+                        }`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (isInWishlist(product.id)) {
+                            removeFromWishlist(product.id);
+                          } else {
+                            const productImage = product.images && product.images.length > 0 
+                              ? product.images[0] 
+                              : "/placeholder.svg";
+                            addToWishlist({
+                              productId: product.id,
+                              name: product.name,
+                              price: product.price,
+                              discountedPrice: product.discountedPrice || undefined,
+                              image: productImage,
+                              weight: product.weight || "150g"
+                            });
+                          }
+                        }}
+                      >
+                        <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? "fill-current" : ""}`} />
+                      </button>
+                    </div>
+                    <CardContent className="p-4">
+                      <Link href={`/products/${product.category.slug}/${product.id}`}>
                         <h3 className="font-medium text-green-800 mb-1 line-clamp-1">{product.name}</h3>
                         {product.discountedPrice ? (
                           <div>
@@ -348,31 +381,31 @@ export default function Home() {
                         ) : (
                           <p className="text-pink-500 font-semibold">Rs. {product.price}</p>
                         )}
-                        <Button 
-                          className="w-full mt-3 bg-green-700 hover:bg-green-800 text-white" 
-                          size="sm"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            const productImage = product.images && product.images.length > 0 
-                              ? product.images[0] 
-                              : "/placeholder.svg";
-                            addItem({
-                              productId: product.id,
-                              name: product.name,
-                              price: product.price,
-                              discountedPrice: product.discountedPrice || undefined,
-                              quantity: 1,
-                              image: productImage,
-                              weight: product.weight || "150g"
-                            });
-                            openCart();
-                          }}
-                        >
-                          Add to Cart
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </Link>
+                      </Link>
+                      <Button 
+                        className="w-full mt-3 bg-green-700 hover:bg-green-800 text-white" 
+                        size="sm"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          const productImage = product.images && product.images.length > 0 
+                            ? product.images[0] 
+                            : "/placeholder.svg";
+                          addItem({
+                            productId: product.id,
+                            name: product.name,
+                            price: product.price,
+                            discountedPrice: product.discountedPrice || undefined,
+                            quantity: 1,
+                            image: productImage,
+                            weight: product.weight || "150g"
+                          });
+                          openCart();
+                        }}
+                      >
+                        Add to Cart
+                      </Button>
+                    </CardContent>
+                  </Card>
                 </motion.div>
               ))}
             </div>

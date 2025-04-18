@@ -22,6 +22,16 @@ import { getProducts, deleteProduct } from "@/app/actions/products.action"
 import { Product, ProductStatus } from "@prisma/client"
 import { toast } from "sonner"
 import { ManageProductCollections } from "@/components/admin/manage-product-collections"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 // Define the product type with related entities
 type ProductWithRelations = Product & {
@@ -47,6 +57,10 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<ProductWithRelations[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [productToDelete, setProductToDelete] = useState<string | null>(null)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     fetchProducts()
@@ -91,21 +105,36 @@ export default function ProductsPage() {
     }
   }
 
-  const handleDeleteProduct = async (productId: string) => {
-    if (confirm("Are you sure you want to delete this product?")) {
-      try {
-        const result = await deleteProduct(productId)
-        if (result.success) {
-          toast.success("Product deleted successfully")
-          // Remove the product from the state
-          setProducts(products.filter(product => product.id !== productId))
-        } else {
-          toast.error(result.error || "Failed to delete product")
-        }
-      } catch (err) {
-        toast.error("An error occurred while deleting the product")
-        console.error(err)
+  const openDeleteDialog = (productId: string) => {
+    setProductToDelete(productId)
+    setIsDeleteDialogOpen(true)
+    setDeleteError(null)
+  }
+
+  const handleDeleteProduct = async () => {
+    if (!productToDelete) return
+
+    setIsDeleting(true)
+    setDeleteError(null)
+    
+    try {
+      const result = await deleteProduct(productToDelete)
+      if (result.success) {
+        toast.success("Product deleted successfully")
+        // Remove the product from the state
+        setProducts(products.filter(product => product.id !== productToDelete))
+        setIsDeleteDialogOpen(false)
+      } else {
+        setDeleteError(result.error || "Failed to delete product")
+        toast.error(result.error || "Failed to delete product")
       }
+    } catch (err) {
+      console.error(err)
+      const errorMessage = "An error occurred while deleting the product"
+      setDeleteError(errorMessage)
+      toast.error(errorMessage)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -294,7 +323,7 @@ export default function ProductsPage() {
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               className="text-red-600"
-                              onClick={() => handleDeleteProduct(product.id)}
+                              onClick={() => openDeleteDialog(product.id)}
                             >
                               <Trash className="mr-2 h-4 w-4" />
                               Delete
@@ -310,6 +339,42 @@ export default function ProductsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Product Deletion</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this product? This action cannot be undone.
+            </AlertDialogDescription>
+            {deleteError && (
+              <div className="mt-2 text-red-500 bg-red-50 p-2 rounded-md text-sm">
+                Error: {deleteError}
+              </div>
+            )}
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteProduct();
+              }}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-500"
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <span className="animate-spin mr-2">⊚</span>
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

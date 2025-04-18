@@ -61,6 +61,7 @@ export default function EditProductPage({ params }: { params: any }) {
   const [isLoading, setIsLoading] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
   const [productImages, setProductImages] = useState<string[]>([])
+  const [productCollections, setProductCollections] = useState<string[]>([])
   const [productData, setProductData] = useState<ProductData>({
     name: "",
     description: "",
@@ -103,6 +104,9 @@ export default function EditProductPage({ params }: { params: any }) {
             benefits: Array.isArray(product.benefits) ? product.benefits.join(', ') : "",
             howToUse: product.howToUse || "",
           })
+          
+          // Store product's collections for later use
+          setProductCollections(product.collectionIds || [])
           
           // Set product images directly as URLs
           setProductImages(Array.isArray(product.images) ? product.images : [])
@@ -149,13 +153,36 @@ export default function EditProductPage({ params }: { params: any }) {
       
       // Add product data
       Object.entries(productData).forEach(([key, value]) => {
-        formData.append(key, value.toString())
+        if (key === 'benefits' && typeof value === 'string') {
+          // Split benefits by comma and add each as a separate entry
+          const benefitsArray = value.split(',').map(b => b.trim()).filter(Boolean);
+          benefitsArray.forEach(benefit => {
+            formData.append('benefits', benefit);
+          });
+        } else {
+          formData.append(key, value.toString());
+        }
       })
       
       // Add images - these are now URLs, not Files
-      productImages.forEach(url => {
-        formData.append('existingImages', url)
-      })
+      if (productImages && productImages.length > 0) {
+        productImages.forEach(url => {
+          formData.append('existingImages', url);
+        });
+      }
+      
+      // IMPORTANT: Add the product's existing collection IDs to maintain relationships
+      if (productCollections && productCollections.length > 0) {
+        productCollections.forEach(collectionId => {
+          formData.append('collectionIds', collectionId);
+        });
+      }
+      
+      console.log('Submitting form data with collections:', 
+        Array.from(formData.entries())
+          .filter(([key]) => key === 'collectionIds')
+          .map(([_, value]) => value)
+      );
       
       // Update product
       const result = await updateProduct(id, formData as any)

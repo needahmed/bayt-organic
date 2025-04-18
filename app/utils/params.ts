@@ -7,19 +7,16 @@ import React from 'react'
  * where params might be a Promise that needs to be unwrapped with React.use()
  */
 export function useParamId(params: any): string {
-  // Direct access (current Next.js)
-  if (params && typeof params === 'object' && 'id' in params) {
-    return params.id as string;
+  // Use React.use to unwrap params if it's a Promise
+  const unwrappedParams = params && typeof params === 'object' && 'then' in params 
+    ? React.use(params)
+    : params;
+    
+  // Extract ID from unwrapped params
+  if (unwrappedParams && typeof unwrappedParams === 'object' && 'id' in unwrappedParams) {
+    return unwrappedParams.id as string;
   }
   
-  // Future Next.js where params is a Promise
-  try {
-    const unwrapped = React.use(params as any);
-    return (unwrapped && typeof unwrapped === 'object' && 'id' in unwrapped) 
-      ? unwrapped.id as string 
-      : '';
-  } catch (e) {
-    console.error("Error unwrapping params:", e);
-    return '';
-  }
+  console.error("Could not extract ID from params", unwrappedParams);
+  return '';
 } 

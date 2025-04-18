@@ -32,6 +32,7 @@ interface Product {
   status?: ProductStatus
   categoryId?: string
   stock?: number
+  images?: string[]
 }
 
 interface ManageProductCollectionsProps {
@@ -103,9 +104,29 @@ export function ManageProductCollections({ productId, trigger, onSaved }: Manage
       if (product.status) formData.append('status', product.status)
       if (product.categoryId) formData.append('categoryId', product.categoryId)
       
+      // Handle benefits as array
+      if (product.benefits && product.benefits.length > 0) {
+        product.benefits.forEach(benefit => {
+          formData.append('benefits', benefit)
+        })
+      }
+      
       // Add collection IDs
       selectedCollections.forEach(id => {
         formData.append('collectionIds', id)
+      })
+
+      // Handle images if the product has them
+      if (product.images && product.images.length > 0) {
+        product.images.forEach(image => {
+          formData.append('existingImages', image)
+        })
+      }
+
+      console.log('Updating collections for product:', { 
+        productId,
+        collections: selectedCollections,
+        existingCollections: product.collectionIds
       })
 
       const result = await updateProduct(productId, formData as any)

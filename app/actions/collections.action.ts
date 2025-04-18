@@ -158,11 +158,11 @@ export async function updateCollection(id: string, data: CollectionFormData) {
         slug: data.slug,
         description: data.description,
         image: imageUrl,
-        products: data.productIds
-          ? {
-              set: data.productIds.map(id => ({ id }))
-            }
-          : undefined
+        products: {
+          set: data.productIds && data.productIds.length > 0
+            ? data.productIds.map(id => ({ id }))
+            : []
+        }
       },
     })
     
