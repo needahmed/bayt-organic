@@ -10,6 +10,7 @@ import { ArrowUpRight, DollarSign, Package, ShoppingCart, Users, ArrowUp, ArrowD
 import { getDashboardAnalytics } from "@/app/actions/dashboard.action"
 import { toast } from "sonner"
 import Link from "next/link"
+import { InvoiceDialog } from "@/components/ui/invoice-dialog"
 
 // Type definition for time range in charts
 type TimeRangeKey = 'daily' | 'weekly' | 'monthly';
@@ -76,6 +77,7 @@ export default function AdminDashboard() {
           <p className="text-muted-foreground">Overview of your store's performance</p>
         </div>
         <div className="flex items-center gap-2">
+          <InvoiceDialog />
           <Button variant="outline" size="sm">
             Download Report
           </Button>
