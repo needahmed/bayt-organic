@@ -11,7 +11,6 @@ import { Leaf, Droplets, ShieldCheck, Recycle, Heart, Sparkles } from "lucide-re
 import { getCollectionBySlug } from "@/app/actions/collections.action"
 import { ensureFeaturedCollection } from "@/app/actions/setup.action"
 import { Product, Category } from "@prisma/client"
-import { getCategories } from "@/app/actions/categories.action"
 import { useCart } from "@/app/context/CartContext"
 import { useToast } from "@/components/ui/use-toast"
 import { useWishlist } from "@/app/context/WishlistContext"
@@ -27,27 +26,12 @@ type CollectionWithProducts = {
   products: ProductWithRelations[];
 };
 
-// Use a custom type for Category with subcategories
-type CategoryWithRelations = {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string | null;
-  image?: string | null;
-  parentId: string | null;
-  subcategories?: CategoryWithRelations[];
-  _count?: {
-    products: number;
-  };
-};
-
 export default function Home() {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true, amount: 0.2 })
   const [featuredProducts, setFeaturedProducts] = useState<ProductWithRelations[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [categories, setCategories] = useState<CategoryWithRelations[]>([])
   const { addItem, openCart } = useCart()
   const { toast } = useToast()
   const { addToWishlist, isInWishlist, removeFromWishlist } = useWishlist()
