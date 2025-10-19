@@ -150,25 +150,7 @@ export default function Home() {
       }
     }
 
-    // Fetch categories for debug section
-    const fetchCategories = async () => {
-      try {
-        const result = await getCategories();
-        if (result.success && result.data) {
-          // Only keep parent categories with subcategories
-          const parentCategories = result.data.filter((cat: CategoryWithRelations) => 
-            !cat.parentId || cat.parentId === ""
-          );
-          
-          setCategories(parentCategories);
-        }
-      } catch (err) {
-        console.error('Error fetching categories:', err);
-      }
-    };
-
     fetchFeaturedProducts();
-    fetchCategories();
   }, [])
 
   // Display products based on what's available

@@ -29,7 +29,7 @@ export const middlewareConfig: NextAuthConfig = {
       return token;
     },
     async session({ session, token }) {
-      if (token && token.role) {
+      if (token && token.role && session.user) {
         session.user.role = token.role as string;
       }
       return session;

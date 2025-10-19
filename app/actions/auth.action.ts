@@ -1,7 +1,7 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import { hashPassword, verifyPassword } from '@/lib/auth-utils'
+import { hashPassword, comparePassword } from '@/lib/server/auth-utils'
 import { revalidatePath } from 'next/cache'
 import crypto from 'crypto'
 import { auth } from "@/auth"
@@ -36,7 +36,7 @@ export async function signUp(data: SignUpFormData) {
     }
     
     // Hash the password
-    const hashedPassword = hashPassword(data.password)
+    const hashedPassword = await hashPassword(data.password)
     
     // Create the user
     const user = await prisma.user.create({
@@ -80,7 +80,7 @@ export async function signIn(data: SignInFormData) {
     }
     
     // Verify the password
-    const isPasswordValid = user.password ? verifyPassword(data.password, user.password) : false
+    const isPasswordValid = user.password ? await comparePassword(data.password, user.password) : false
     
     if (!isPasswordValid) {
       return { success: false, error: 'Invalid email or password' }
@@ -174,14 +174,14 @@ export async function changePassword(userId: string, currentPassword: string, ne
     }
     
     // Verify the current password
-    const isPasswordValid = user.password ? verifyPassword(currentPassword, user.password) : false
+    const isPasswordValid = user.password ? await comparePassword(currentPassword, user.password) : false
     
     if (!isPasswordValid) {
       return { success: false, error: 'Current password is incorrect' }
     }
     
     // Hash the new password
-    const hashedPassword = hashPassword(newPassword)
+    const hashedPassword = await hashPassword(newPassword)
     
     // Update the password
     await prisma.user.update({
