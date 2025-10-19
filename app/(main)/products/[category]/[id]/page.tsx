@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { motion } from "framer-motion"
 import { ChevronLeft, Minus, Plus, Star, Truck, Shield, AlertCircle, Heart } from "lucide-react"
 import { getProductById } from "@/app/actions/products.action"
-import { Product, Category, Collection } from "@prisma/client"
+import { Product, Category, Collection, Review } from "@prisma/client"
 import { useCart } from "@/app/context/CartContext"
 import { useWishlist } from "@/app/context/WishlistContext"
 
@@ -18,7 +18,7 @@ import { useWishlist } from "@/app/context/WishlistContext"
 type ProductWithRelations = Product & {
   category: Category;
   collections: Collection[];
-  reviews: any[]; // Using any for reviews as we don't have the full type
+  reviews: Review[];
 };
 
 export default function ProductPage({ params }: { params: any }) {
@@ -312,7 +312,7 @@ export default function ProductPage({ params }: { params: any }) {
                 >
                   <div className="flex justify-between mb-2">
                     <h3 className="font-medium text-green-800">{review.name}</h3>
-                    <span className="text-sm text-gray-500">{new Date(review.createdAt).toLocaleDateString()}</span>
+                    <span className="text-sm text-gray-500">{new Date(review.date).toLocaleDateString()}</span>
                   </div>
                   <div className="flex text-amber-400 mb-2">
                     {[...Array(5)].map((_, i) => (
